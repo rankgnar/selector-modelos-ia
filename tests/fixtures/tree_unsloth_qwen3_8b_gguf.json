@@ -1,0 +1,235 @@
+[
+ {
+  "type": "file",
+  "path": ".gitattributes",
+  "size": 3083
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-BF16.gguf",
+  "size": 16388044384,
+  "lfs": {
+   "size": 16388044384
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-IQ4_NL.gguf",
+  "size": 4793624384,
+  "lfs": {
+   "size": 4793624384
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-IQ4_XS.gguf",
+  "size": 4581287744,
+  "lfs": {
+   "size": 4581287744
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q2_K.gguf",
+  "size": 3281733440,
+  "lfs": {
+   "size": 3281733440
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q2_K_L.gguf",
+  "size": 3427592000,
+  "lfs": {
+   "size": 3427592000
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q3_K_M.gguf",
+  "size": 4124161856,
+  "lfs": {
+   "size": 4124161856
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q3_K_S.gguf",
+  "size": 3769612096,
+  "lfs": {
+   "size": 3769612096
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q4_1.gguf",
+  "size": 5247756096,
+  "lfs": {
+   "size": 5247756096
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q4_K_M.gguf",
+  "size": 5027784512,
+  "lfs": {
+   "size": 5027784512
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q4_K_S.gguf",
+  "size": 4802012992,
+  "lfs": {
+   "size": 4802012992
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q5_K_M.gguf",
+  "size": 5851113280,
+  "lfs": {
+   "size": 5851113280
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q5_K_S.gguf",
+  "size": 5720762176,
+  "lfs": {
+   "size": 5720762176
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q6_K.gguf",
+  "size": 6725900096,
+  "lfs": {
+   "size": 6725900096
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-Q8_0.gguf",
+  "size": 8709519168,
+  "lfs": {
+   "size": 8709519168
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-IQ1_M.gguf",
+  "size": 2396489536,
+  "lfs": {
+   "size": 2396489536
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-IQ1_S.gguf",
+  "size": 2275379008,
+  "lfs": {
+   "size": 2275379008
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-IQ2_M.gguf",
+  "size": 3110897472,
+  "lfs": {
+   "size": 3110897472
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-IQ2_XXS.gguf",
+  "size": 2605221696,
+  "lfs": {
+   "size": 2605221696
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-IQ3_XXS.gguf",
+  "size": 3410265920,
+  "lfs": {
+   "size": 3410265920
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-Q2_K_XL.gguf",
+  "size": 3501975360,
+  "lfs": {
+   "size": 3501975360
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-Q3_K_XL.gguf",
+  "size": 4307052352,
+  "lfs": {
+   "size": 4307052352
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-Q4_K_XL.gguf",
+  "size": 5135722304,
+  "lfs": {
+   "size": 5135722304
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-Q5_K_XL.gguf",
+  "size": 5878081344,
+  "lfs": {
+   "size": 5878081344
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-Q6_K_XL.gguf",
+  "size": 7490549568,
+  "lfs": {
+   "size": 7490549568
+  }
+ },
+ {
+  "type": "file",
+  "path": "Qwen3-8B-UD-Q8_K_XL.gguf",
+  "size": 10824038208,
+  "lfs": {
+   "size": 10824038208
+  }
+ },
+ {
+  "type": "file",
+  "path": "README.md",
+  "size": 20119
+ },
+ {
+  "type": "file",
+  "path": "config.json",
+  "size": 754
+ },
+ {
+  "type": "file",
+  "path": "imatrix_unsloth.dat",
+  "size": 5316778,
+  "lfs": {
+   "size": 5316778
+  }
+ },
+ {
+  "type": "file",
+  "path": "params",
+  "size": 178
+ },
+ {
+  "type": "file",
+  "path": "template",
+  "size": 1482
+ }
+]

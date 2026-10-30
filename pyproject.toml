@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "selector-modelos-ia"
+version = "0.1.0"
+description = "Search engine of current AI models (OpenRouter + Hugging Face) for students: filters, coding agents, own hardware."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28",
+    "pydantic>=2.7",
+    "keyring>=25",
+    "psutil>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "respx>=0.21"]
+
+[project.scripts]
+selector-ia-server = "selector_ia.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+selector_ia = ["web/*.html", "web/*.css", "web/*.js", "web/*.svg", "web/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: hits the real OpenRouter / Hugging Face APIs (run with -m live)"]
+addopts = "-m 'not live'"

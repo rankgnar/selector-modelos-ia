@@ -1,0 +1,215 @@
+{
+ "_id": "6adc1caea171e3197498083f",
+ "id": "Nanbeige/Nanbeige4.3-33B",
+ "evalResults": [
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "harborframework/terminal-bench-2.1",
+     "task_id": "terminalbench_2_1"
+    },
+    "value": 80.9,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    }
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "harborframework/terminal-bench",
+     "task_id": "terminalbench_4"
+    },
+    "value": 23.8,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    },
+    "notes": "Run with mini-swe-agent v2.4.6, not Terminus."
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "datacurve/deep-swe",
+     "task_id": "deep_swe"
+    },
+    "value": 65.5,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    },
+    "notes": "Run with mini-swe-agent v2.4.6."
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "ScaleAI/SWE-bench_Pro",
+     "task_id": "SWE_Bench_Pro"
+    },
+    "value": 60.3,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    }
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "benchflow/skillsbench",
+     "task_id": "skillsbench_v1_1"
+    },
+    "value": 61.1,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    },
+    "notes": "With-skills pass rate as reported on the model card, not the with/without-skills lift."
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "claw-eval/Claw-Eval",
+     "task_id": "general"
+    },
+    "value": 78.3,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    }
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "hkust-nlp/Toolathlon",
+     "task_id": "toolathlon_verified"
+    },
+    "value": 70.4,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    },
+    "notes": "No max_tokens limit per request."
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "collinear-ai/yc-bench",
+     "task_id": "medium"
+    },
+    "value": 1025437,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    },
+    "notes": "Final funds in USD; only the last 10 user turns kept as context."
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "Idavidrein/gpqa",
+     "task_id": "diamond"
+    },
+    "value": 89.5,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    }
+   }
+  },
+  {
+   "filename": ".eval_results/Nanbeige4.3-33B.yaml",
+   "verified": false,
+   "data": {
+    "dataset": {
+     "id": "MathArena/aime_2026",
+     "task_id": "MathArena/aime_2026"
+    },
+    "value": 95.2,
+    "date": "2026-10-25",
+    "source": {
+     "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B",
+     "name": "Nanbeige4.3-33B model card"
+    }
+   }
+  }
+ ],
+ "cardData": {
+  "license": "apache-2.0",
+  "language": [
+   "en",
+   "zh"
+  ],
+  "library_name": "transformers",
+  "pipeline_tag": "text-generation",
+  "tags": [
+   "llm",
+   "nanbeige"
+  ],
+  "base_model": [
+   "Nanbeige/Nanbeige4.3-33B-Base"
+  ]
+ },
+ "gated": false,
+ "downloads": 9655,
+ "tags": [
+  "transformers",
+  "safetensors",
+  "llama",
+  "text-generation",
+  "llm",
+  "nanbeige",
+  "conversational",
+  "en",
+  "zh",
+  "base_model:Nanbeige/Nanbeige4.3-33B-Base",
+  "base_model:finetune:Nanbeige/Nanbeige4.3-33B-Base",
+  "license:apache-2.0",
+  "eval-results",
+  "text-generation-inference",
+  "endpoints_compatible",
+  "region:us"
+ ],
+ "pipeline_tag": "text-generation",
+ "lastModified": "2026-10-28T01:59:01.000Z",
+ "safetensors": {
+  "parameters": {
+   "BF16": 33118977024
+  },
+  "total": 33118977024
+ }
+}

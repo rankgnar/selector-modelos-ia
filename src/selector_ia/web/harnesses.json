@@ -1,0 +1,126 @@
+{
+  "checked": "2026-10-30",
+  "note": "Each entry comes from the agent's official documentation or OpenRouter's official guide (docs). Requirements are only those the docs state. {model} = the OpenRouter model id.",
+  "harnesses": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "kind": "Agente de terminal (Anthropic)",
+      "docs": "https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration",
+      "requires": { "authors": ["anthropic"] },
+      "requires_text": "OpenRouter: «Claude Code with OpenRouter is only guaranteed to work with the Anthropic first-party provider». Por eso se muestran solo modelos de Anthropic (puedes ver los demás, sin garantía).",
+      "steps": [
+        { "title": "Añade esto a ~/.bashrc y abre una terminal nueva", "code": "export OPENROUTER_API_KEY=\"sk-or-...\"\nexport ANTHROPIC_BASE_URL=\"https://openrouter.ai/api\"\nexport ANTHROPIC_AUTH_TOKEN=\"$OPENROUTER_API_KEY\"\nexport ANTHROPIC_API_KEY=\"\"\nexport ANTHROPIC_DEFAULT_SONNET_MODEL=\"{model}\"" },
+        { "title": "Arranca y comprueba", "text": "Ejecuta claude. Con /status debe aparecer la URL base https://openrouter.ai/api. Si antes entraste con una cuenta de Anthropic, ejecuta /logout primero." }
+      ]
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "kind": "Agente de terminal (OpenAI)",
+      "docs": "https://openrouter.ai/docs/cookbook/coding-agents/codex-cli",
+      "requires": {},
+      "steps": [
+        { "title": "Añade la clave a ~/.bashrc", "code": "export OPENROUTER_API_KEY=\"sk-or-...\"" },
+        { "title": "Escribe ~/.codex/config.toml", "code": "model_provider = \"openrouter\"\nmodel = \"{model}\"\n\n[model_providers.openrouter]\nname = \"openrouter\"\nbase_url = \"https://openrouter.ai/api/v1\"\n\n[model_providers.openrouter.auth]\ncommand = \"sh\"\nargs = [\"-c\", \"echo $OPENROUTER_API_KEY\"]" },
+        { "title": "Arranca", "text": "Ejecuta codex en la carpeta del proyecto. El nombre del modelo tiene que ser exactamente el de OpenRouter." }
+      ]
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "kind": "Agente de terminal y escritorio",
+      "docs": "https://openrouter.ai/docs/cookbook/coding-agents/opencode-integration",
+      "requires": {},
+      "steps": [
+        { "title": "Conecta OpenRouter", "text": "Ejecuta opencode en la carpeta del proyecto, escribe /connect, busca OpenRouter y pega tu clave." },
+        { "title": "Modelo por defecto (opcional): ~/.config/opencode/opencode.json", "code": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"model\": \"openrouter/{model}\"\n}" },
+        { "title": "O elígelo al vuelo", "text": "Escribe /models y busca {model}. Si no aparece, sal de OpenCode y vuelve a abrirlo." }
+      ]
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "kind": "Agente de terminal (pi-coding-agent)",
+      "docs": "https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/providers.md",
+      "requires": {},
+      "steps": [
+        { "title": "Añade la clave a ~/.bashrc (o escribe /login openrouter dentro de pi)", "code": "export OPENROUTER_API_KEY=\"sk-or-...\"" },
+        { "title": "Elige el modelo", "text": "Ejecuta pi, escribe /model y busca {model} entre los de OpenRouter." }
+      ]
+    },
+    {
+      "id": "omp",
+      "name": "OMP (oh my pi)",
+      "kind": "Agente de terminal (derivado de Pi)",
+      "docs": "https://github.com/can1357/oh-my-pi/blob/main/docs/providers.md",
+      "requires": {},
+      "steps": [
+        { "title": "Añade la clave a ~/.bashrc (OpenRouter ya viene incluido en omp)", "code": "export OPENROUTER_API_KEY=\"sk-or-...\"" },
+        { "title": "Elige el modelo", "text": "Ejecuta omp y selecciona el modelo openrouter/{model} (formato proveedor/modelo)." }
+      ]
+    },
+    {
+      "id": "cline",
+      "name": "Cline",
+      "kind": "Extensión de VS Code",
+      "docs": "https://docs.cline.bot/provider-config/openrouter",
+      "requires": {},
+      "steps": [
+        { "title": "En Cline", "text": "Pulsa el engranaje → «API Provider»: OpenRouter → pega tu clave en «OpenRouter API Key» → en «Model» elige {model}. Deja «Use custom base URL» sin marcar." }
+      ]
+    },
+    {
+      "id": "roo",
+      "name": "Roo Code",
+      "kind": "Extensión de VS Code",
+      "docs": "https://roocodeinc.github.io/Roo-Code/providers/openrouter",
+      "requires": {},
+      "steps": [
+        { "title": "En Roo Code", "text": "Pulsa el engranaje → «API Provider»: OpenRouter → pega tu clave en «OpenRouter API Key» → en «Model» elige {model}." }
+      ]
+    },
+    {
+      "id": "kilo",
+      "name": "Kilo Code",
+      "kind": "Extensión de VS Code y terminal",
+      "docs": "https://kilo.ai/docs/ai-providers/openrouter",
+      "requires": {},
+      "steps": [
+        { "title": "En Kilo Code", "text": "Abre Settings (engranaje) → pestaña Providers → añade OpenRouter y pega tu clave → elige el modelo {model}. Se guarda en kilo.json." }
+      ]
+    },
+    {
+      "id": "aider",
+      "name": "Aider",
+      "kind": "Agente de terminal",
+      "docs": "https://aider.chat/docs/llms/openrouter.html",
+      "requires": {},
+      "steps": [
+        { "title": "Añade la clave a ~/.bashrc", "code": "export OPENROUTER_API_KEY=\"sk-or-...\"" },
+        { "title": "Arranca en la carpeta del proyecto", "code": "aider --model openrouter/{model}" },
+        { "title": "Si da error", "text": "Según su documentación, revisa la privacidad de tu cuenta de OpenRouter: para usar todos los modelos hay que permitir los proveedores que pueden entrenar con los datos." }
+      ]
+    },
+    {
+      "id": "continue",
+      "name": "Continue",
+      "kind": "Extensión de VS Code y JetBrains",
+      "docs": "https://docs.continue.dev/customize/model-providers/top-level/openrouter",
+      "requires": {},
+      "steps": [
+        { "title": "Añade el modelo a config.yaml", "code": "models:\n  - name: {name}\n    provider: openrouter\n    model: {model}\n    apiBase: https://openrouter.ai/api/v1\n    apiKey: <tu clave de OpenRouter>{tools_capability}" }
+      ]
+    },
+    {
+      "id": "openai-compatible",
+      "name": "Otro programa compatible con OpenAI",
+      "kind": "Cualquier programa o SDK con «URL base» configurable",
+      "docs": "https://openrouter.ai/docs/quickstart",
+      "requires": {},
+      "steps": [
+        { "title": "Datos de conexión", "code": "URL base:  https://openrouter.ai/api/v1\nClave:     tu clave de OpenRouter (sk-or-...)\nModelo:    {model}" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+[
+ {
+  "_id": "68158b914954e5d707baba74",
+  "id": "Qwen/Qwen3-8B-AWQ",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "base_model": "Qwen/Qwen3-8B"
+  },
+  "lastModified": "2025-05-21T06:09:42.000Z",
+  "downloads": 2219696,
+  "safetensors": {
+   "parameters": {
+    "BF16": 1244967936,
+    "I32": 6945767424
+   },
+   "total": 8190735360
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "qwen3",
+   "text-generation",
+   "conversational",
+   "arxiv:2309.00071",
+   "arxiv:2505.09388",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "text-generation-inference",
+   "endpoints_compatible",
+   "4-bit",
+   "awq",
+   "region:us"
+  ]
+ },
+ {
+  "_id": "6815b8d70e2525074c399975",
+  "id": "Qwen/Qwen3-8B-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "base_model": "Qwen/Qwen3-8B"
+  },
+  "lastModified": "2025-05-21T06:31:50.000Z",
+  "downloads": 690077,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5027783488
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "arxiv:2309.00071",
+   "arxiv:2505.09388",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ]
+ },
+ {
+  "_id": "680f75ea384885553e1ab6c1",
+  "id": "Qwen/Qwen3-8B-FP8",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B-FP8/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "base_model": [
+    "Qwen/Qwen3-8B"
+   ]
+  },
+  "lastModified": "2025-07-26T03:46:05.000Z",
+  "downloads": 440319,
+  "safetensors": {
+   "parameters": {
+    "BF16": 1244967936,
+    "F8_E4M3": 6945767424
+   },
+   "total": 8190735360
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "qwen3",
+   "text-generation",
+   "conversational",
+   "arxiv:2309.00071",
+   "arxiv:2505.09388",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "text-generation-inference",
+   "endpoints_compatible",
+   "fp8",
+   "region:us"
+  ]
+ },
+ {
+  "_id": "680f8fa2384885553e2167cf",
+  "id": "unsloth/Qwen3-8B-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen3-8B",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE",
+   "license": "apache-2.0",
+   "tags": [
+    "qwen3",
+    "qwen",
+    "unsloth",
+    "transformers"
+   ]
+  },
+  "lastModified": "2025-06-08T08:09:00.000Z",
+  "downloads": 134005,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16388044384
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "qwen3",
+   "text-generation",
+   "qwen",
+   "unsloth",
+   "en",
+   "arxiv:2309.00071",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ]
+ },
+ {
+  "_id": "68c098e63d345b888fd1a4e9",
+  "id": "nvidia/Qwen3-8B-NVFP4",
+  "cardData": {
+   "pipeline_tag": "text-generation",
+   "base_model": [
+    "Qwen/Qwen3-8B"
+   ],
+   "license": "apache-2.0",
+   "library_name": "Model Optimizer",
+   "tags": [
+    "nvidia",
+    "ModelOpt",
+    "Qwen3",
+    "quantized",
+    "FP4",
+    "fp4"
+   ]
+  },
+  "lastModified": "2025-09-09T21:15:18.000Z",
+  "downloads": 119855,
+  "safetensors": {
+   "parameters": {
+    "BF16": 1244967936,
+    "U8": 3472883712
+   },
+   "total": 4717851648
+  },
+  "tags": [
+   "Model Optimizer",
+   "safetensors",
+   "qwen3",
+   "nvidia",
+   "ModelOpt",
+   "Qwen3",
+   "quantized",
+   "FP4",
+   "fp4",
+   "text-generation",
+   "conversational",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "8-bit",
+   "modelopt",
+   "region:us"
+  ]
+ }
+]
