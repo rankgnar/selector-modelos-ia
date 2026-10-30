@@ -51,7 +51,9 @@ agentes, error de transcripción…), mejor calidad-precio, más barato, más us
 **Los 3 primeros** salen destacados con el porqué; debajo está la lista completa. Al pulsar un modelo ves:
 a favor y en contra, dónde usarlo, si cabe en tu equipo (con el comando de Ollama, llama.cpp, LM Studio o
 vLLM) y cómo configurarlo en tu programa. **Probar** envía el mismo mensaje a hasta 3 modelos y compara
-las respuestas (con tu clave de OpenRouter; suele costar menos de 0,01 USD).
+las respuestas (con tu clave de OpenRouter; suele costar menos de 0,01 USD). Trae **preguntas preparadas**
+(básica y 10 de programación avanzada) que puedes cambiar, añadir o borrar en «Editar preguntas preparadas»
+a medida que los modelos mejoran; «Restaurar las de fábrica» vuelve a las originales.
 
 **Buscar por nombre** (arriba) busca también en todo Hugging Face, no solo en el catálogo: escribe
 «abliterated», «dolphin», «qwen»… y verás también lo que encuentre allí.

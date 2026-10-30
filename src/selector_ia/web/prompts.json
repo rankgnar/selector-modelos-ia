@@ -1,0 +1,70 @@
+{
+  "prompts": [
+    {
+      "id": "basico-1",
+      "group": "Básico",
+      "title": "Qué es un modelo de lenguaje",
+      "text": "Explícame en 5 líneas, para alguien que empieza, qué es un modelo de lenguaje y pon un ejemplo cotidiano."
+    },
+    {
+      "id": "avanzado-1",
+      "group": "Programación avanzada",
+      "title": "Rate limiter distribuido",
+      "text": "Implementa en Python un rate limiter de ventana deslizante sobre Redis que sea atómico ante condiciones de carrera entre múltiples instancias del servidor. Máximo 25 líneas. Solo el código."
+    },
+    {
+      "id": "avanzado-2",
+      "group": "Programación avanzada",
+      "title": "Algoritmo logarítmico",
+      "text": "Escribe una función que devuelva la mediana de dos arrays ordenados de tamaños distintos en O(log(min(m, n))), sin fusionarlos. Solo el código."
+    },
+    {
+      "id": "avanzado-3",
+      "group": "Programación avanzada",
+      "title": "Parser sin eval",
+      "text": "Implementa en Python un evaluador de expresiones aritméticas con + - * / ^, paréntesis y menos unario, donde ^ es asociativo a la derecha. Debe evaluar correctamente \"-(2+3)*-4^2\" y \"2^3^2\". Sin eval. Máximo 40 líneas."
+    },
+    {
+      "id": "avanzado-4",
+      "group": "Programación avanzada",
+      "title": "Precisión numérica",
+      "text": "Escribe una función que sume una lista de floats minimizando el error de redondeo, sin usar math.fsum. Después, en una línea, explica por qué sum() no basta y en qué caso tu solución también falla."
+    },
+    {
+      "id": "avanzado-5",
+      "group": "Programación avanzada",
+      "title": "Seguridad",
+      "text": "Encuentra todas las vulnerabilidades de este código, una línea cada una, y da la versión corregida.\n\nfrom flask import Flask, request, send_file\nimport os\napp = Flask(__name__)\nTOKEN = os.environ[\"TOKEN\"]\n\n@app.route(\"/file\")\ndef get_file():\n    if request.args.get(\"token\") == TOKEN:\n        return send_file(os.path.join(\"/srv/data\", request.args[\"name\"]))\n    return \"no\", 403"
+    },
+    {
+      "id": "avanzado-6",
+      "group": "Programación avanzada",
+      "title": "Transacciones concurrentes",
+      "text": "Escribe la transacción SQL (PostgreSQL) para transferir dinero entre dos cuentas que evite doble gasto, saldo negativo y deadlocks cuando miles de transferencias cruzadas ocurren a la vez. Solo el SQL."
+    },
+    {
+      "id": "avanzado-7",
+      "group": "Programación avanzada",
+      "title": "Bug sutil en asyncio",
+      "text": "Este código funciona \"a veces\". Explica todos los problemas en máximo 4 líneas y corrígelo.\n\nimport asyncio\nasync def main(urls):\n    for url in urls:\n        asyncio.create_task(fetch(url))\n    await asyncio.sleep(1)"
+    },
+    {
+      "id": "avanzado-8",
+      "group": "Programación avanzada",
+      "title": "Consistent hashing",
+      "text": "Implementa consistent hashing en Python con nodos virtuales, de forma que añadir o quitar un nodo solo redistribuya aproximadamente 1/n de las claves. Métodos: add_node, remove_node, get_node. Máximo 30 líneas."
+    },
+    {
+      "id": "avanzado-9",
+      "group": "Programación avanzada",
+      "title": "Modelo de memoria en Java",
+      "text": "¿Es correcto este singleton en Java multihilo? Si no, explica el fallo exacto en 2 líneas y corrígelo.\n\nclass Config {\n    private static Config instance;\n    static Config get() {\n        if (instance == null) {\n            synchronized (Config.class) {\n                if (instance == null) instance = new Config();\n            }\n        }\n        return instance;\n    }\n}"
+    },
+    {
+      "id": "avanzado-10",
+      "group": "Programación avanzada",
+      "title": "Comportamiento indefinido en C",
+      "text": "¿Qué devuelve f(INT_MAX) compilado con gcc -O2 y por qué? Máximo 3 líneas.\n\nint f(int x) { return x + 1 > x; }"
+    }
+  ]
+}

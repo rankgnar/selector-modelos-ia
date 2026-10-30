@@ -94,6 +94,10 @@ equipo, siempre marcada como «estimación» con su fórmula.
 - **Siempre actualizado:** catálogo cada 6 h (al abrir y mientras está abierta; reintento cada 30 min sin
   internet). La app se actualiza sola desde GitHub en cada arranque, con vuelta atrás si falla.
 - **«Probar»** se mantiene: cada alumno pone su propia clave de OpenRouter (solo para eso).
+- **Preguntas preparadas en «Probar» (30/10/2026):** de fábrica «Básico» (la de siempre) y «Programación
+  avanzada» (10 del usuario, literales) en `web/prompts.json`. El usuario las edita desde la app (grupo, título,
+  texto; añadir, borrar, restaurar las de fábrica) para endurecerlas según avanzan los modelos; se guardan en
+  `cache.sqlite3`. Decidido: una pregunta cada vez (sin batería) y sin respuesta de referencia.
 - **Interfaz:** tema claro y oscuro (el usuario usa oscuro), estilo profesional; los filtros quedan en la
   dirección (`#caps=pdf,tools&app=cline…`) para compartir enlaces.
 - La ventana se abre maximizada; no se toca la barra de favoritos del usuario.
@@ -123,7 +127,7 @@ Capturas sin ventana: `google-chrome --headless=new --screenshot=… "http://sel
 
 ## ▶ Para la próxima sesión (anotado el 30/10/2026)
 
-**Dónde lo dejamos:** todo está hecho, probado (119 tests de Python, 23 de Node), subido a GitHub (público) e
+**Dónde lo dejamos:** todo está hecho, probado (124 tests de Python, 23 de Node), subido a GitHub (público) e
 instalado en el PC del usuario. Último cambio: los filtros ahora filtran de verdad («Programar» con prueba,
 «Declara español» estricto, tamaños corregidos). El usuario aún no lo ha visto en la app: empezar
 preguntándole qué tal tras cerrar y reabrir la app.

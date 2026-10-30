@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, urlparse
 from pydantic import ValidationError
 
 from selector_ia import credentials
+from selector_ia.compare import prompts as try_prompts
 from selector_ia.compare.tester import MAX_MODELS, ask_one, check_ids
 from selector_ia.data.cache import Cache
 from selector_ia.data.catalog import build_catalog
@@ -266,7 +267,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/ocupado": self.get_busy, "/api/status": self.get_status, "/api/catalog": self.get_catalog,
             "/api/profiles": self.get_profiles, "/api/fit": self.get_fit, "/api/check": self.get_check,
             "/api/settings": self.get_settings, "/api/version": self.get_version,
-            "/api/hfsearch": self.get_hf_search, "/api/card": self.get_card,
+            "/api/hfsearch": self.get_hf_search, "/api/card": self.get_card, "/api/prompts": self.get_prompts,
         }
         try:
             if url.path in routes:
@@ -285,6 +286,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/profiles": self.post_profile, "/api/profiles/detect": self.post_detect,
             "/api/profiles/delete": self.post_delete_profile, "/api/settings": self.post_settings,
             "/api/refresh": self.post_refresh, "/api/probar": self.post_try,
+            "/api/prompts": self.post_prompt, "/api/prompts/delete": self.post_delete_prompt,
+            "/api/prompts/reset": self.post_reset_prompts,
         }
         path = urlparse(self.path).path
         if path not in routes:
@@ -433,6 +436,14 @@ class Handler(BaseHTTPRequestHandler):
     def get_version(self, _params):
         self._json(app_version())
 
+    def get_prompts(self, _params, saved: str | None = None):
+        cache = Cache()
+        try:
+            prompts, custom = try_prompts.load(cache)
+        finally:
+            cache.close()
+        self._json({"prompts": [p.model_dump() for p in prompts], "custom": custom, "saved": saved})
+
     # --- POST ---
 
     def post_profile(self, body):
@@ -519,6 +530,30 @@ class Handler(BaseHTTPRequestHandler):
             raise SelectorError("Falta tu clave de OpenRouter: añádela en Ajustes para poder probar.")
         answer = ask_one(OpenRouterClient(api_key=key), model, prompt, reasoning=known[model])
         self._json(answer.model_dump())
+
+    def post_prompt(self, body):
+        cache = Cache()
+        try:
+            saved = try_prompts.save(cache, body)
+        finally:
+            cache.close()
+        self.get_prompts({}, saved)
+
+    def post_delete_prompt(self, body):
+        cache = Cache()
+        try:
+            try_prompts.delete(cache, str(body.get("id", "")))
+        finally:
+            cache.close()
+        self.get_prompts({})
+
+    def post_reset_prompts(self, _body):
+        cache = Cache()
+        try:
+            try_prompts.reset(cache)
+        finally:
+            cache.close()
+        self.get_prompts({})
 
 
 # --- start ---

@@ -37,6 +37,8 @@ const state = {
   priceStep: 4,
   shown: PAGE,
   result: null,
+  prompts: null,           // {prompts: [{id, group, title, text}], custom} for «Probar»
+  tryPrompt: null,         // id of the ready-made prompt last chosen
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -656,21 +658,98 @@ function modal(title, body, { wide = false } = {}) {
 }
 function closeModal() { $("#modal").hidden = true; $("#modal").innerHTML = ""; }
 
-const TEST_PROMPT = "Explícame en 5 líneas, para alguien que empieza, qué es un modelo de lenguaje y pon un ejemplo cotidiano.";
+// Ready-made prompts: factory set in prompts.json; the user's edited list lives on the server (/api/prompts).
+async function loadPrompts() {
+  if (state.prompts) return;
+  try {
+    state.prompts = state.mode === "live" ? await api.get("/api/prompts")
+      : { ...(await (await fetch("prompts.json")).json()), custom: false };
+  } catch (err) { state.prompts = { prompts: [], custom: false }; toast(err.message); }
+}
 
-function openTry(id) {
+function promptOptions(selected) {
+  const groups = [...new Set(state.prompts.prompts.map((p) => p.group))];
+  return `<option value="">— Escribir mi propio mensaje —</option>${groups.map((g) => `<optgroup label="${esc(g)}">${state.prompts.prompts
+    .filter((p) => p.group === g).map((p) => `<option value="${esc(p.id)}" ${p.id === selected ? "selected" : ""}>${esc(p.title)}</option>`).join("")}</optgroup>`).join("")}`;
+}
+
+function currentPrompt() { return state.prompts.prompts.find((p) => p.id === $("#try-preset").value) || null; }
+
+async function openTry(id) {
+  await loadPrompts();
   const r = state.result;
   const first = r.results.find((s) => s.rec.id === id);
   const others = r.results.filter((s) => s.rec.id !== id && s.rec.openrouter && (s.rec.capabilities || []).includes("chat")).slice(0, 5);
   const options = [first, ...others].map((s, i) => `<label class="opt"><input type="checkbox" data-try-model="${esc(s.rec.openrouter.id)}" ${i < 3 ? "checked" : ""}>
     <span class="opt-label">${esc(s.rec.name)} <span class="muted">${esc(s.rec.openrouter.id)}</span></span><span class="opt-count">${fmtUsd(s.price.value)} ${per(s)}</span></label>`).join("");
+  const list = state.prompts.prompts;
+  const chosen = list.find((p) => p.id === state.tryPrompt) || list[0] || null;
+  const mock = state.mode === "mockup";
   modal("Probar: mismo mensaje, respuestas lado a lado", `
-    ${state.mode === "mockup" ? '<div class="notice"><span><b>Maqueta:</b> aquí no se envía nada. En la app se enviará con tu clave de OpenRouter (Ajustes) y verás tiempo, tokens y coste real.</span></div>' : ""}
-    <div class="field"><label for="try-prompt">Mensaje de prueba</label><textarea class="input" id="try-prompt">${esc(TEST_PROMPT)}</textarea></div>
+    ${mock ? '<div class="notice"><span><b>Maqueta:</b> aquí no se envía nada. En la app se enviará con tu clave de OpenRouter (Ajustes) y verás tiempo, tokens y coste real.</span></div>' : ""}
+    <div class="field"><label for="try-preset">Pregunta preparada</label><select class="select" id="try-preset">${promptOptions(chosen?.id)}</select></div>
+    <div class="field"><label for="try-prompt">Mensaje de prueba</label><textarea class="input" id="try-prompt" rows="8">${esc(chosen?.text || "")}</textarea></div>
+    <details class="tp-edit"><summary>Editar preguntas preparadas</summary>
+      <p class="muted small-text">El texto es el del mensaje de prueba de arriba. Cambia las preguntas cuando los modelos las resuelvan sin esfuerzo.</p>
+      <div class="form-grid">
+        <div class="field"><label for="tp-group">Grupo</label><input class="input" id="tp-group" list="tp-groups" value="${esc(chosen?.group || "")}" placeholder="Programación avanzada">
+          <datalist id="tp-groups">${[...new Set(list.map((p) => p.group))].map((g) => `<option value="${esc(g)}">`).join("")}</datalist></div>
+        <div class="field"><label for="tp-title">Título</label><input class="input" id="tp-title" value="${esc(chosen?.title || "")}" placeholder="Parser sin eval"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" id="tp-update" ${mock || !chosen ? "disabled" : ""}>Guardar cambios</button>
+        <button class="btn" type="button" id="tp-add" ${mock ? "disabled" : ""}>Guardar como nueva</button>
+        <button class="btn" type="button" id="tp-delete" ${mock || !chosen ? "disabled" : ""}>Borrar</button>
+        ${state.prompts.custom ? `<button class="btn" type="button" id="tp-reset" ${mock ? "disabled" : ""}>Restaurar las de fábrica</button>` : ""}
+        <span class="muted" id="tp-status"></span></div>
+    </details>
     <div class="field"><label>Modelos (hasta 3)</label><div>${options}</div></div>
-    <div class="actions"><button class="btn primary" type="button" id="try-send" ${state.mode === "mockup" ? "disabled" : ""}>${ICON.play}Enviar</button>
+    <div class="actions"><button class="btn primary" type="button" id="try-send" ${mock ? "disabled" : ""}>${ICON.play}Enviar</button>
       <span class="muted" id="try-status"></span></div>
     <div class="answers" id="answers"></div>`, { wide: true });
+}
+
+function pickPrompt() {
+  const p = currentPrompt();
+  state.tryPrompt = p ? p.id : null;
+  if (p) $("#try-prompt").value = p.text;
+  $("#tp-group").value = p ? p.group : "";
+  $("#tp-title").value = p ? p.title : "";
+  $("#tp-update").disabled = $("#tp-delete").disabled = !p || state.mode !== "live";
+}
+
+// Saves through the API and redraws only the prompt picker, so the ticked models and answers stay.
+async function changePrompts(path, body, done) {
+  try {
+    state.prompts = await api.post(path, body);
+    if (path === "/api/prompts") state.tryPrompt = state.prompts.saved;
+    else if (!state.prompts.prompts.some((p) => p.id === state.tryPrompt)) state.tryPrompt = null;
+    $("#try-preset").innerHTML = promptOptions(state.tryPrompt);
+    $("#tp-groups").innerHTML = [...new Set(state.prompts.prompts.map((p) => p.group))].map((g) => `<option value="${esc(g)}">`).join("");
+    if (path !== "/api/prompts") pickPrompt();
+    else $("#tp-update").disabled = $("#tp-delete").disabled = false;
+    if (state.prompts.custom && !$("#tp-reset")) {
+      $("#tp-status").insertAdjacentHTML("beforebegin", '<button class="btn" type="button" id="tp-reset">Restaurar las de fábrica</button>');
+    } else if (!state.prompts.custom) $("#tp-reset")?.remove();
+    $("#tp-status").textContent = done;
+  } catch (err) { $("#tp-status").textContent = err.message; }
+}
+
+function savePrompt(asNew) {
+  const p = currentPrompt();
+  changePrompts("/api/prompts", { id: asNew ? null : p?.id, group: $("#tp-group").value, title: $("#tp-title").value,
+    text: $("#try-prompt").value }, asNew ? "Pregunta añadida." : "Cambios guardados.");
+}
+
+function deletePrompt() {
+  const p = currentPrompt();
+  if (p && confirm(`¿Borrar la pregunta «${p.title}»?`)) changePrompts("/api/prompts/delete", { id: p.id }, "Pregunta borrada.");
+}
+
+function resetPrompts() {
+  if (confirm("¿Volver a las preguntas de fábrica? Se pierden las que hayas añadido o cambiado.")) {
+    changePrompts("/api/prompts/reset", {}, "Preguntas de fábrica restauradas.");
+  }
 }
 
 async function sendTry() {
@@ -1012,6 +1091,10 @@ function bind() {
     if (t.closest("#freshness")) { refreshCatalog(); return; }
     if (t.closest("[data-open-method]")) { e.preventDefault(); openMethod(); return; }
     if (t.closest("#try-send")) { sendTry(); return; }
+    if (t.closest("#tp-update")) { savePrompt(false); return; }
+    if (t.closest("#tp-add")) { savePrompt(true); return; }
+    if (t.closest("#tp-delete")) { deletePrompt(); return; }
+    if (t.closest("#tp-reset")) { resetPrompts(); return; }
     if (t.closest("#pc-save")) { savePc(t.closest("#pc-save").dataset.original); return; }
     if (t.closest("#pc-detect")) { detectPc(); return; }
     if (t.closest("#set-save")) { saveSettings(); return; }
@@ -1027,6 +1110,7 @@ function bind() {
   $("#open-pc").addEventListener("click", () => openPc());
   document.addEventListener("change", (e) => {
     if (e.target.id === "eq-template") applyTemplate(e.target.value);
+    if (e.target.id === "try-preset") pickPrompt();
     if (e.target.id === "drawer-harness") {
       const rec = state.records.find((r) => r.id === state.openId);
       if (rec) renderSteps(e.target.value, rec);

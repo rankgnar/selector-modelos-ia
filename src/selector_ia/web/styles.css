@@ -314,6 +314,10 @@ blockquote { margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--bo
 .input, textarea.input { width: 100%; min-height: 36px; padding: 8px 11px; border: 1px solid var(--border-strong);
                          border-radius: 8px; background: var(--raised); }
 textarea.input { min-height: 90px; resize: vertical; }
+#try-prompt { font-family: var(--mono); font-size: 12.5px; }
+.tp-edit { margin: -4px 0 16px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.tp-edit summary { cursor: pointer; font-size: 13px; color: var(--text-2); }
+.tp-edit[open] summary { margin-bottom: 8px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
 .profile .btn.small { flex: none; }
 .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }

@@ -47,13 +47,15 @@ version fails to install; a failed commit is remembered in `version-fallida` and
   Origin checks, CSP. Snapshot kept in memory + cache blob `finder_snapshot`; a watcher thread rebuilds it
   when older than `refresh_hours` (default 6, retry every 30 min after a failure). API: `/api/ocupado`
   (launcher), `status`, `catalog`, `fit`, `check`, `profiles` (+`/detect`, `/delete`), `settings` (keys go to
-  the keyring and are never returned), `refresh`, `probar`, `version`, `hfsearch` (live search by name in
+  the keyring and are never returned), `refresh`, `probar`, `prompts`, `version`, `hfsearch` (live search by name in
   all of Hugging Face).
 - `src/selector_ia/web/` — `finder.js` (pure search logic: AND filters, counts, 6 sorts, quality = benchmarks
   of the ticked capabilities, suggestions that never drop a capability first, harness requirements and
   setup), `app.js` (rendering; without the server it reads `snapshot.json` as a labelled mock-up),
   `styles.css` (tokens, dark/light), `harnesses.json` (coding agents for the OpenRouter API).
 - `src/selector_ia/compare/tester.py` — «Probar»: `ask_one` / `check_ids` (ids re-checked, max 3).
+  `compare/prompts.py` — ready-made prompts: factory set `web/prompts.json`; once edited, the whole list lives
+  in the cache setting `try_prompts` until «Restaurar» (API `/api/prompts` + `/delete`, `/reset`).
 - `packaging/linux/` — `install.sh`, `uninstall.sh`, `lanzar.sh`, `parar.sh`, `actualizar.sh`, icon.
 - `tests/fixtures/` — trimmed real API responses (2026-10-30). `tests/js/` — Node tests.
 

@@ -230,3 +230,17 @@ def test_card_quotes_the_model_card(app, monkeypatch):
     data = call(host, "/api/card?id=fan/M-Uncensored")[1]
     assert data["refusals"] == ["Refusals 6/100 100/100"] and data["documented"] and data["variant"] == "balanced"
     assert "error" in call(host, "/api/card?id=nada")[1]
+
+
+def test_prompts_api(app):
+    host, _ = app
+    status, data = call(host, "/api/prompts")
+    assert status == 200 and not data["custom"] and data["prompts"][0]["id"] == "basico-1"
+    status, data = call(host, "/api/prompts", {"group": "Básico", "title": "Mía", "text": "Hola"})
+    assert status == 200 and data["custom"] and any(p["id"] == data["saved"] for p in data["prompts"])
+    status, data = call(host, "/api/prompts/delete", {"id": data["saved"]})
+    assert len(data["prompts"]) == 11
+    assert "grupo" in call(host, "/api/prompts", {"group": "", "title": "x", "text": "x"})[1]["error"]
+    status, data = call(host, "/api/prompts/reset", {})
+    assert status == 200 and not data["custom"]
+    assert call(host, "/prompts.json")[0] == 200
