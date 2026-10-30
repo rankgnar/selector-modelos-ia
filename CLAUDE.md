@@ -34,11 +34,15 @@ version fails to install; a failed commit is remembered in `version-fallida` and
 - `src/selector_ia/finder/` — `catalog.py` (`build_snapshot`: one `ModelRecord` per ORIGINAL model from
   OpenRouter + every HF pipeline tag; capabilities only from data; `old` = published and not updated for
   2 years; third-party fine-tunes/merges/uncensored builds kept as `community` with `base_model`;
-  `uncensored`/`adult` flags; `hf_records` for the live search; `SNAPSHOT_VERSION`), `fit.py` (fit estimate for the whole catalog on one profile), `equipment.py` (saved computers:
+  `uncensored`/`adult` flags; `evals` by category; `arch` = slim config.json (fetched once, cached for good,
+  GGUF repos use their base model), `max_context`, `mtp`; `hf_records` for the live search; `SNAPSHOT_VERSION`),
+  `card.py` (verbatim quotes from model cards: refusals, KL, tool-call tests, aggressive/balanced), `fit.py` (fit estimate for the whole catalog on one profile), `equipment.py` (saved computers:
   form, templates VPS / PC GPU / GPU server).
 - `src/selector_ia/hardware/` — `profile.py`, `local.py` (psutil, nvidia-smi, amdgpu sysfs), `parsers.py`,
-  `variants.py` (GGUF/AWQ/... with REAL file sizes), `fit.py` (estimate + ✅/⚠️/❌), `runners.py`
-  (Ollama/llama.cpp/LM Studio/vLLM/...), `check.py` (exact check of one model with real files).
+  `variants.py` (GGUF incl. imatrix IQ4_XS/IQ4_NL, AWQ... with REAL file sizes), `fit.py` (memory = weights +
+  KV cache of the layers that grow with the context × agents, f16/q8_0 + 15 %; ✅/⚠️/❌; `AGENTIC_OK` floor),
+  `runners.py` (Ollama/llama.cpp with context, -np and q8_0 flags; vLLM/SGLang for several agents; llama-bench),
+  `check.py` (exact check of one model with real files and the student's usage).
 - `src/selector_ia/server.py` — `ThreadingHTTPServer` on 127.0.0.1 (ports 8790…8804, first free), Host +
   Origin checks, CSP. Snapshot kept in memory + cache blob `finder_snapshot`; a watcher thread rebuilds it
   when older than `refresh_hours` (default 6, retry every 30 min after a failure). API: `/api/ocupado`

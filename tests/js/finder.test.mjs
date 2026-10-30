@@ -213,3 +213,16 @@ test("video models are priced per second; rerank is its own capability", () => {
   assert.deepEqual(ids(r), ["v/rerank"]);
   assert.equal(r.results[0].price.value, null);          // no published price -> "sin datos", never "gratis"
 });
+
+test("agentic use on own hardware ranks by the agents index", () => {
+  const recs = [
+    rec("o/smart", { hf_id: "o/smart", benchmarks: { intelligence: 60, agentic: 30 } }),
+    rec("o/agent", { hf_id: "o/agent", benchmarks: { intelligence: 40, agentic: 50 }, mtp: true }),
+  ];
+  const fit = { "o/smart": { verdict: "ok" }, "o/agent": { verdict: "ok" } };
+  assert.equal(ids(search(recs, q({ where: "local" }), fit))[0], "o/smart");
+  const r = search(recs, q({ where: "local", use: "agent" }), fit);
+  assert.equal(ids(r)[0], "o/agent");
+  assert.match(r.method, /índice de agentes/);
+  assert.ok(prosCons(r.results[0], q({ where: "local", use: "agent" }), r.results).pros.some((p) => p.includes("MTP")));
+});

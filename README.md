@@ -59,6 +59,20 @@ las respuestas (con tu clave de OpenRouter; suele costar menos de 0,01 USD).
 Si ningún modelo cumple todo, te dice qué quitar con un botón. Los filtros quedan en la dirección de la
 página: puedes compartir un enlace con los filtros ya marcados.
 
+**Elegir un modelo para tu equipo** («Mis equipos») sigue este método (enlace «¿cómo elijo?» en la app):
+indica **cómo lo vas a usar** (chat o agente con herramientas), el **contexto** que necesitas (8K a 262K
+tokens), cuántos **agentes a la vez** y si quieres **comprimir la caché del contexto (q8_0)**. Con eso:
+
+- la memoria se calcula como pesos + caché del contexto (solo las capas que la guardan, × agentes) + margen;
+- para agentes se exige Q5_K_M o mejor (o IQ4_XS), como regla general y no universal, y el orden prima el
+  índice de agentes (fiabilidad con herramientas) sobre la inteligencia bruta;
+- el detalle muestra los benchmarks por categoría (marcando los que publica el propio autor), todas las
+  cuantizaciones reales con su tamaño, el desglose de memoria y los comandos de Ollama, llama.cpp, LM Studio
+  y, con varios agentes, vLLM o SGLang;
+- en las versiones sin censura cita de su ficha las negativas que le quedan, la divergencia KL, si probaron el
+  uso de herramientas y si son «aggressive» o «balanced»; si no publican evaluaciones, te avisa;
+- la velocidad no se inventa: te dice si el modelo trae MTP y te da el comando para medirla (`llama-bench`).
+
 **Mis equipos:** detecta tu ordenador o añade otros a mano o desde una plantilla (VPS sin GPU, PC con GPU
 NVIDIA, servidor GPU alquilado). Se guardan para la próxima vez.
 

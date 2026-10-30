@@ -58,7 +58,9 @@ const BENCH = {
 
 export function emptyQuery() {
   return { text: "", caps: [], reqs: [], where: "openrouter", onlyFits: true, maxPrice: null,
-           includeOld: false, sort: "quality", harness: null, harnessStrict: true, community: false };
+           includeOld: false, sort: "quality", harness: null, harnessStrict: true, community: false,
+           // how a downloaded model will be used (Mis equipos): drives memory, quantization and ranking
+           use: "chat", ctx: 8192, agents: 1, kvq: false };
 }
 
 // --- harnesses (coding agents that use the OpenRouter API; data in harnesses.json, from official docs) ---
@@ -215,10 +217,12 @@ export function matches(rec, query, fit, harnesses = null) {
 // --- quality ---
 
 // Which benchmarks measure "quality" for what was ticked.
-export function relevantBenchmarks(caps) {
+export function relevantBenchmarks(caps, query = null) {
   const keys = [];
+  // Agentic use on own hardware: tool-calling reliability first (the method's criterion number one).
+  if (query && query.where === "local" && query.use === "agent") keys.push("agentic");
   if (caps.includes("code")) keys.push("coding");
-  if (caps.includes("tools")) keys.push("agentic");
+  if (caps.includes("tools") && !keys.includes("agentic")) keys.push("agentic");
   if (caps.includes("audio_in")) keys.push("asr_wer");
   if (caps.includes("image_gen")) keys.push("arena_image");
   if (caps.includes("image_edit")) keys.push("arena_edit");
@@ -246,7 +250,7 @@ function logNorm(values, value) {
 }
 
 function scoreAll(records, query) {
-  const keys = relevantBenchmarks(query.caps);
+  const keys = relevantBenchmarks(query.caps, query);
   const best = bestValues(records, keys);
   const downloads = records.map((r) => r.downloads || 0);
   const trending = records.map((r) => r.trending || 0);
@@ -370,7 +374,7 @@ export function suggestion(records, query, fit, harnesses = null) {
 }
 
 export function methodText(query) {
-  const keys = relevantBenchmarks(query.caps);
+  const keys = relevantBenchmarks(query.caps, query);
   const names = keys.map((k) => `${BENCH[k].label} (${BENCH[k].source})`).join(" y ");
   switch (query.sort) {
     case "cheap": return "Del más barato al más caro, con el precio publicado en OpenRouter.";
@@ -422,7 +426,8 @@ export function prosCons(s, query, results) {
   const priced = results.map((r) => r.price.value).filter((v) => v !== null && v > 0).sort((a, b) => a - b);
 
   for (const p of s.parts) pros.push(benchText(p.key, p.value));
-  if (!s.parts.length && relevantBenchmarks(query.caps).length) cons.push("Sin benchmark publicado para lo que has marcado");
+  if (!s.parts.length && relevantBenchmarks(query.caps, query).length) cons.push("Sin benchmark publicado para lo que has marcado");
+  if (rec.mtp) pros.push("Trae MTP (predicción de varios tokens): puede ir más rápido con decodificación especulativa");
   if (isFree(rec) && query.where !== "local") pros.push("Tiene versión gratis en OpenRouter (con límites de uso)");
   else if (s.price.value !== null && priced.length > 1 && s.price.value === priced[0]) pros.push("El más barato de la lista");
   if (rec.hf_id) pros.push("Se puede descargar y usar en tu equipo");

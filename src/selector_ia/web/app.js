@@ -7,6 +7,8 @@ import {
 } from "./finder.js";
 
 const PRICE_STEPS = [0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 50];
+const CONTEXTS = [8192, 32768, 131072, 262144];
+const AGENT_COUNTS = [1, 2, 4, 8];
 const PAGE = 60;
 const BENCH_SHORT = {
   intelligence: "Inteligencia", coding: "Programación", agentic: "Agentes", asr_wer: "Error (WER)",
@@ -131,10 +133,16 @@ function sampleFit(records, profile) {
   return fit;
 }
 
+// How the model will be used on own hardware (sent to /api/fit, /api/check, /api/hfsearch).
+function usageParams() {
+  const q = state.query;
+  return `ctx=${q.ctx}&agents=${q.agents}&kvq=${q.kvq ? 1 : 0}&agentic=${q.use === "agent" ? 1 : 0}`;
+}
+
 async function loadFit() {
   if (!state.profile) { state.fit = null; return; }
   if (state.mode === "mockup") { state.fit = sampleFit(state.records, state.profile); return; }
-  state.fit = (await api.get(`/api/fit?profile=${encodeURIComponent(state.profile.name)}`)).fit;
+  state.fit = (await api.get(`/api/fit?profile=${encodeURIComponent(state.profile.name)}&${usageParams()}`)).fit;
 }
 
 // --- persistence (per-viewer convenience only) ---
@@ -154,6 +162,10 @@ function queryToHash(q) {
   if (q.harness) p.set("app", q.harness);
   if (!q.harnessStrict) p.set("all", "1");
   if (q.community) p.set("com", "1");
+  if (q.use !== "chat") p.set("use", q.use);
+  if (q.ctx !== 8192) p.set("ctx", String(q.ctx));
+  if (q.agents !== 1) p.set("ag", String(q.agents));
+  if (q.kvq) p.set("kvq", "1");
   return p.toString();
 }
 
@@ -164,7 +176,9 @@ function hashToQuery(hash) {
            where: p.get("where") || "openrouter", sort: p.get("sort") || "quality",
            maxPrice: p.has("max") ? Number(p.get("max")) : null, includeOld: p.get("old") === "1",
            onlyFits: p.get("fits") !== "0", harness: p.get("app") || null, harnessStrict: p.get("all") !== "1",
-           community: p.get("com") === "1" };
+           community: p.get("com") === "1", use: p.get("use") === "agent" ? "agent" : "chat",
+           ctx: CONTEXTS.includes(Number(p.get("ctx"))) ? Number(p.get("ctx")) : 8192,
+           agents: AGENT_COUNTS.includes(Number(p.get("ag"))) ? Number(p.get("ag")) : 1, kvq: p.get("kvq") === "1" };
 }
 
 function saveQuery() {
@@ -211,6 +225,16 @@ function renderSidebar() {
         <div class="muted small-text">${esc(state.profile ? state.profile.summary || "" : "")}</div>` : ""}
       <button class="btn small" type="button" data-open="pc">${state.profiles.length ? "Gestionar equipos" : "Añadir un equipo"}</button>
       ${opt({ id: "onlyFits", label: "Solo los que caben", help: "Quita los que no caben en este equipo o cuyo tamaño no se conoce.", checked: q.onlyFits, count: null })}
+      <p class="field-label">Cómo lo vas a usar <a href="#" class="small-text" data-open-method="1">¿cómo elijo?</a></p>
+      <div class="seg seg-small">
+        <button type="button" data-use="chat" aria-pressed="${q.use === "chat"}" title="Conversar, escribir, programar con ayuda"><span class="seg-label">Chat</span></button>
+        <button type="button" data-use="agent" aria-pressed="${q.use === "agent"}" title="Usa herramientas: la fiabilidad en tool calling manda y la cuantización mínima sube a Q5_K_M (o IQ4_XS)"><span class="seg-label">Agente con herramientas</span></button>
+      </div>
+      <label class="field-label" for="ctx">Contexto que necesitas</label>
+      <select class="select" id="ctx">${CONTEXTS.map((c) => `<option value="${c}" ${q.ctx === c ? "selected" : ""}>${fmtTokens(c)} tokens</option>`).join("")}</select>
+      <label class="field-label" for="agents">Agentes o peticiones a la vez</label>
+      <select class="select" id="agents">${AGENT_COUNTS.map((n) => `<option value="${n}" ${q.agents === n ? "selected" : ""}>${n}</option>`).join("")}</select>
+      ${opt({ id: "kvq", label: "Comprimir la caché del contexto (q8_0)", help: "Reduce a la mitad la memoria del contexto con poco impacto en la calidad: clave para contextos largos.", checked: q.kvq, count: null })}
     </div>` : "";
   const h = q.harness && state.harnesses[q.harness];
   const harnessOpts = [`<option value="">Cualquier programa (${fmtNumber(c.harness[""] ?? 0, 0)})</option>`]
@@ -368,7 +392,7 @@ function renderTop() {
     return;
   }
   $("#top").innerHTML = r.results.slice(0, 3).map((s, i) => {
-    const ctx = s.rec.openrouter && s.rec.openrouter.context;
+    const ctx = (s.rec.openrouter && s.rec.openrouter.context) || s.rec.max_context;
     const third = q.where === "local"
       ? `<div><div class="metric-label">¿Cabe?</div><div class="metric-value">${fitBadge(s.rec)}</div></div>`
       : `<div><div class="metric-label">Contexto</div><div class="metric-value">${ctx ? fmtTokens(ctx) : "—"}</div></div>`;
@@ -397,7 +421,7 @@ function renderList() {
     ${withFit ? "<span>¿Cabe?</span>" : ""}<span class="hide-md">Dónde</span></div>`;
   const rows = r.results.slice(0, state.shown).map((s) => {
     const rec = s.rec;
-    const ctx = rec.openrouter && rec.openrouter.context;
+    const ctx = (rec.openrouter && rec.openrouter.context) || rec.max_context;
     const lic = rec.hf_id ? (rec.license || "sin datos") : "API";
     return `<div class="row" data-open-model="${esc(rec.id)}" tabindex="0">
       <span class="pos">${s.position}</span>
@@ -433,7 +457,7 @@ function openModel(id) {
   const or = rec.openrouter;
   const facts = [
     ["Precio", s.price.value === null ? (or ? "sin datos" : "—") : `${fmtUsd(s.price.value)} ${s.price.unit}`],
-    ["Contexto", or && or.context ? `${fmtTokens(or.context)} tokens` : "sin datos"],
+    ["Contexto", (or && or.context) || rec.max_context ? `${fmtTokens((or && or.context) || rec.max_context)} tokens` : "sin datos"],
     ["Tamaño", rec.params ? `${fmtParams(rec.params)} parámetros` : "sin datos"],
     ["Licencia", rec.hf_id ? (rec.license || "sin datos") : "Términos del proveedor"],
     ["Publicado", fmtDate(rec.created)],
@@ -461,9 +485,18 @@ function openModel(id) {
   const fitHtml = rec.hf_id && state.profile ? `<section><p class="section-title">En ${esc(state.profile.name)}</p>
       <div class="fit-box">${f ? `${fitBadge(rec)} ${esc(f.text)}` : "Sin datos de tamaño"}
       <div class="muted">${state.mode === "mockup" ? "Estimación de ejemplo: memoria ≈ parámetros × bytes por parámetro × 1,15 (Q4 en modelos de texto, F16 en imagen, vídeo y voz). La app comprobará los archivos reales y te dará el comando de Ollama o LM Studio."
-        : "Estimación por el número de parámetros: memoria ≈ pesos × 1,15."}</div></div>
+        : f && f.kv_gb ? `Estimación por el número de parámetros: memoria ≈ (pesos + caché del contexto, ${fmtNumber(f.kv_gb, 1)} GB) × 1,15.`
+        : `Estimación por el número de parámetros: memoria ≈ pesos × 1,15.${f && f.kv_note ? ` ${f.kv_note}` : ""}`}</div></div>
       ${state.mode === "live" ? `<div id="exact-check" class="exact"><span class="muted">Comprobando con los archivos reales…</span></div>` : ""}</section>` : "";
   const canTry = or && (rec.capabilities || []).includes("chat");
+  const evalsHtml = evalSection(rec);
+  const cardHtml = rec.community || rec.uncensored
+    ? `<section><p class="section-title">Qué dice su ficha (versión ${rec.uncensored ? "sin censura" : "de la comunidad"})</p>
+        <div id="card-facts" class="fit-box"><span class="muted">Leyendo su ficha…</span></div></section>` : "";
+  const speedHtml = rec.hf_id && q.where === "local" ? `<section><p class="section-title">Velocidad</p><div class="fit-box">
+      ${rec.mtp ? '<span class="badge ok">MTP</span> Trae predicción de varios tokens: con decodificación especulativa puede ir bastante más rápido si tu programa lo usa.<br>' : ""}
+      Los tokens por segundo dependen de tu GPU y no se pueden calcular de antemano: mídelos con <span class="code">llama-bench</span>
+      (comando en «Cómo arrancarlo»).${q.agents > 1 ? ` Con ${q.agents} agentes a la vez, se reparten esa velocidad.` : ""}</div></section>` : "";
   const harnessIds = Object.keys(state.harnesses);
   const chosen = q.harness && state.harnesses[q.harness] ? q.harness : "openai-compatible";
   const harnessHtml = canTry && harnessIds.length ? `<section><p class="section-title">Cómo usarlo con tu programa</p>
@@ -482,7 +515,10 @@ function openModel(id) {
         <div><p class="section-title">A favor</p><ul>${pc.pros.map((x) => `<li class="pro">${ICON.check}<span>${esc(x)}</span></li>`).join("") || '<li class="muted">—</li>'}</ul></div>
         <div><p class="section-title">En contra</p><ul>${pc.cons.map((x) => `<li class="con">${ICON.x}<span>${esc(x)}</span></li>`).join("") || '<li class="muted">—</li>'}</ul></div>
       </section>
+      ${evalsHtml}
+      ${cardHtml}
       ${fitHtml}
+      ${speedHtml}
       ${harnessHtml}
       <section><p class="section-title">Dónde usarlo</p><div class="places">${places.join("")}</div></section>
       <section class="actions">
@@ -495,6 +531,55 @@ function openModel(id) {
   state.openId = rec.id;
   if (harnessHtml) renderSteps(chosen, rec);
   if (fitHtml && state.mode === "live") loadCheck(rec);
+  if (cardHtml && state.mode === "live") loadCard(rec);
+}
+
+const EVAL_LABELS = {
+  agentic_coding: "Programación con agentes", tools: "Uso de herramientas y agentes", instructions: "Seguir instrucciones",
+  computer_use: "Uso del ordenador", reasoning: "Razonamiento y conocimiento", documents: "Documentos",
+  vision: "Visión", speech: "Voz", other: "Otros",
+};
+
+// Benchmarks by category: independent (Artificial Analysis via OpenRouter) vs published by the author (model card).
+function evalSection(rec) {
+  const b = rec.benchmarks || {};
+  const indep = [["intelligence", "Inteligencia"], ["coding", "Programación"], ["agentic", "Agentes"]]
+    .filter(([k]) => typeof b[k] === "number")
+    .map(([k, l]) => `<span class="badge accent">${esc(l)} ${fmtNumber(b[k])}</span>`).join(" ");
+  const groups = {};
+  for (const e of rec.evals || []) (groups[e.category] = groups[e.category] || []).push(e);
+  const order = Object.keys(EVAL_LABELS).filter((k) => groups[k]);
+  if (!indep && !order.length) return "";
+  const lists = order.map((k) => `<div class="eval-group"><div class="step-title">${esc(EVAL_LABELS[k])}</div>
+      ${groups[k].slice(0, 6).map((e) => `<div class="eval-row"><div class="eval-name">${esc(e.name)}</div>
+        <div class="eval-meta"><b>${fmtNumber(e.value)}</b><span class="badge ${e.verified ? "ok" : ""}">${e.verified ? "verificado" : "del autor"}</span>${e.date ? `<span class="muted">${fmtDate(e.date)}</span>` : ""}</div></div>`).join("")}</div>`).join("");
+  return `<section><p class="section-title">Benchmarks por categoría</p>
+    ${indep ? `<div style="margin-bottom:8px">Independientes (Artificial Analysis): ${indep}</div>` : ""}
+    ${lists ? `<div class="evals">${lists}</div>
+      <p class="muted small-text">«Del autor»: publicados por quien hizo el modelo en su ficha; suelen ser optimistas.
+      Úsalos como filtro inicial, no como veredicto, y fíjate en la categoría que te importa, no en la media.</p>` : ""}</section>`;
+}
+
+async function loadCard(rec) {
+  const box = () => (state.openId === rec.id ? $("#card-facts") : null);
+  try {
+    const c = await api.get(`/api/card?id=${encodeURIComponent(rec.hf_id || rec.id)}`);
+    const quote = (title, list) => (list.length ? `<div class="step-title" style="margin-top:6px">${esc(title)}</div>`
+      + list.map((x) => `<blockquote>${esc(x)}</blockquote>`).join("") : "");
+    const variant = c.variant === "aggressive"
+      ? '<div class="hint-box">Variante <b>aggressive</b>: según el método, suele sacrificar fiabilidad con herramientas. Para agentes, mejor una «balanced».</div>'
+      : c.variant === "balanced" ? '<div class="hint-box">Variante <b>balanced</b>: según el método, la opción más segura para uso con agentes.</div>' : "";
+    const html = (c.documented
+      ? quote("Negativas que le quedan", c.refusals) + quote("Divergencia KL respecto al original (más baja = más parecido)", c.kl)
+      : '<div class="hint-box"><b>No publica evaluaciones</b> (negativas restantes, divergencia KL): desconfía. Ante la duda, elige la versión más documentada y descargada.</div>')
+      + quote("Pruebas de uso de herramientas que menciona", c.tools)
+      + (c.documented && !c.tools.length ? '<div class="muted small-text">No menciona pruebas reales de tool calling.</div>' : "")
+      + variant
+      + `<div class="muted small-text">Copiado literalmente de <a href="${esc(c.url)}" target="_blank" rel="noopener">su ficha</a>.</div>`;
+    if (box()) box().innerHTML = html;
+  } catch (err) {
+    if (box()) box().innerHTML = `<span class="muted">No se ha podido leer su ficha: ${esc(err.message)}</span>`;
+  }
 }
 
 function renderSteps(harnessId, rec) {
@@ -512,20 +597,43 @@ function renderSteps(harnessId, rec) {
 }
 
 async function loadCheck(rec) {
-  const key = `${state.profile.name}|${rec.id}`;
+  const key = `${state.profile.name}|${rec.id}|${usageParams()}`;
   const show = (html) => { const el = $("#exact-check"); if (el && state.openId === rec.id) el.innerHTML = html; };
   try {
-    if (!state.checks[key]) state.checks[key] = await api.get(`/api/check?id=${encodeURIComponent(rec.id)}&profile=${encodeURIComponent(state.profile.name)}`);
+    if (!state.checks[key]) {
+      state.checks[key] = await api.get(`/api/check?id=${encodeURIComponent(rec.id)}&profile=${encodeURIComponent(state.profile.name)}&${usageParams()}`);
+    }
     const c = state.checks[key];
+    const q = state.query;
     const cls = { ok: "ok", limited: "warn", no: "bad" }[c.verdict] || "";
-    const label = { ok: "Cabe", limited: "Lento", no: "No cabe" }[c.verdict] || "¿?";
+    const label = { ok: "Cabe", limited: c.below_floor ? "Por debajo de Q5" : "Lento", no: "No cabe" }[c.verdict] || "¿?";
+    const b = c.breakdown;
+    const bar = b && b.total_gb ? `<div class="membar" title="${esc(b.kv_formula || "")}">
+        <span class="seg-w" style="flex:${b.weights_gb || 0}">Pesos ${fmtNumber(b.weights_gb, 1)} GB</span>
+        ${b.kv_gb ? `<span class="seg-k" style="flex:${b.kv_gb}">Contexto ${fmtNumber(b.kv_gb, 1)} GB</span>` : ""}
+        ${b.margin_gb ? `<span class="seg-m" style="flex:${b.margin_gb}">Margen ${fmtNumber(b.margin_gb, 1)} GB</span>` : ""}</div>
+      <div class="muted small-text">Total ≈ ${fmtNumber(b.total_gb, 1)} GB = pesos + caché del contexto
+        (${fmtTokens(c.context)} tokens × ${q.agents} ${q.agents === 1 ? "agente" : "agentes"}${q.kvq ? ", comprimida q8_0" : ""}) + 15 % de margen.
+        ${b.kv_formula ? esc(b.kv_formula) : "Sin datos de arquitectura: no incluye la caché del contexto."}</div>` : "";
+    const rows = (c.variants || []).map((v) => `<tr class="${v.chosen ? "chosen" : ""}">
+        <td><b>${esc(v.label)}</b>${v.chosen ? ' <span class="badge accent">elegida</span>' : ""}${q.use === "agent" && v.agentic_ok ? ' <span class="badge ok">apta para agentes</span>' : ""}</td>
+        <td>${v.size_gb == null ? "—" : `${fmtNumber(v.size_gb, 1)} GB`}${v.estimated ? ' <span class="muted">(estimación)</span>' : ""}</td>
+        <td>${v.need_gb == null ? "—" : `${fmtNumber(v.need_gb, 1)} GB`}</td>
+        <td><span class="badge ${{ ok: "ok", limited: "warn", no: "bad" }[v.verdict] || ""}">${{ ok: "Cabe", limited: "Lento", no: "No cabe" }[v.verdict] || "¿?"}</span></td></tr>`).join("");
     const runners = c.runners.map((r) => `<div class="step"><div class="step-title">${esc(r.tool)}
         <a class="muted small-text" href="${esc(r.url)}" target="_blank" rel="noopener">${ICON.link}</a></div>
         <p>${esc(r.note)}</p>${r.command ? `<div class="codeblock"><pre>${esc(r.command)}</pre><button class="btn small" type="button" data-copy="${esc(r.command)}">${ICON.copy}Copiar</button></div>` : ""}</div>`).join("");
     show(`<div class="fit-box"><b>Comprobación con los archivos reales:</b> <span class="badge ${cls}">${label}</span> ${esc(c.reason)}
         ${c.variant ? `<div class="muted">Versión ${esc(c.variant)} · ${esc(c.memory_source || "")}</div>` : ""}
-        ${c.notes.map((n) => `<div class="muted">${esc(n)}</div>`).join("")}</div>
-      ${runners ? `<p class="section-title" style="margin-top:14px">Cómo arrancarlo</p><div class="steps">${runners}</div>` : ""}`);
+        ${c.notes.map((n) => `<div class="muted">${esc(n)}</div>`).join("")}${bar}</div>
+      ${rows ? `<p class="section-title" style="margin-top:14px">Cuantizaciones disponibles</p>
+        <table class="quant"><thead><tr><th>Versión</th><th>Archivos</th><th>Memoria total</th><th>¿Cabe?</th></tr></thead><tbody>${rows}</tbody></table>
+        <p class="muted small-text">Ninguna cuantización es «sin pérdida»: cuánto se pierde depende de cada modelo.
+          Regla general del método (no universal): Q5_K_M suele ser el punto óptimo y por debajo de Q5 el uso de
+          herramientas empieza a degradarse; las imatrix (IQ4_XS) reparten los bits según la importancia de cada peso.</p>` : ""}
+      ${runners ? `<p class="section-title" style="margin-top:14px">Cómo arrancarlo</p><div class="steps">${runners}</div>` : ""}
+      ${q.agents > 1 ? `<div class="hint-box" style="margin-top:10px">Con ${q.agents} agentes en la misma GPU se reparten la velocidad y pueden saturarla.
+        llama.cpp atiende varias peticiones con -np, pero con muchos agentes vLLM o SGLang suelen rendir mejor.</div>` : ""}`);
   } catch (err) {
     show(`<span class="muted">No se ha podido comprobar: ${esc(err.message)}</span>`);
   }
@@ -588,6 +696,32 @@ async function sendTry() {
 }
 
 const MACHINES = { pc: "PC", vps: "VPS", gpu_server: "Servidor GPU" };
+
+function openMethod() {
+  modal("Cómo elegir un modelo para tu equipo", `<div class="method">
+    <p><b>1. Rendimiento, no tamaño.</b> Un modelo mediano puede acercarse a uno enorme en ciertas tareas. Mira los
+      benchmarks <i>por categoría</i> (programación con agentes, uso de herramientas, seguir instrucciones…), no la media.
+      Los que publica el propio fabricante suelen ser optimistas: úsalos como filtro inicial.</p>
+    <p><b>2. Primero, para qué lo quieres.</b> Si es para agentes, la fiabilidad con herramientas manda sobre la
+      inteligencia bruta. El contexto que necesitas condiciona todo lo demás.</p>
+    <p><b>3. Cuantización.</b> BF16/F16 es precisión completa; Q8, Q6, Q5, Q4 y Q3 comprimen cada vez más. Regla general:
+      Q5_K_M suele ser el punto óptimo y por debajo de Q5 el uso de herramientas empieza a degradarse. Excepción: las
+      imatrix (IQ4_XS) reparten los bits según la importancia de cada peso. «Sin pérdida» no existe y cuánto se pierde
+      depende de cada modelo.</p>
+    <p><b>4. Memoria.</b> Total = pesos + caché del contexto (crece con el contexto y con cada agente) + margen.
+      Comprimir la caché (q8_0) la reduce a la mitad con poco impacto. Un modelo más pequeño deja sitio para más
+      contexto o más agentes.</p>
+    <p><b>5. Versiones sin censura.</b> Quitan las negativas pero pueden dañar al modelo. Compara las negativas que le
+      quedan, la divergencia KL (cuanto más baja, mejor) y si probaron de verdad el uso de herramientas. Las
+      «aggressive» suelen perder fiabilidad con herramientas; las «balanced» son más seguras. Si no publica
+      evaluaciones, desconfía.</p>
+    <p><b>6. Formato y programa.</b> GGUF con llama.cpp u Ollama: eficiente con una GPU y un agente. vLLM o SGLang: mejores
+      con muchos agentes a la vez.</p>
+    <p><b>7. Velocidad.</b> Mide tus tokens por segundo reales (llama-bench). El MTP o la decodificación especulativa
+      pueden acelerar mucho. Varios agentes en la misma GPU se reparten la velocidad.</p>
+    <p class="muted small-text">La app aplica estos criterios con tus respuestas en «Cómo lo vas a usar». Los números
+      salen de Hugging Face y OpenRouter; las reglas generales se indican siempre como tales.</p></div>`);
+}
 
 function openPc(editing = null) {
   const mock = state.mode === "mockup";
@@ -662,6 +796,14 @@ async function detectPc() {
   } catch (err) { $("#pc-status").textContent = err.message; }
 }
 
+async function reloadUsage() {
+  state.checks = {};
+  state.extra.clear();
+  await loadFit();
+  update();
+  if (state.query.text) liveSearch(state.query.text);
+}
+
 // Typing a name also searches all of Hugging Face (beyond the catalog), e.g. «abliterated», «dolphin».
 let liveTimer = null;
 function liveSearch(text) {
@@ -671,7 +813,7 @@ function liveSearch(text) {
     state.live = { text, busy: true, added: 0, error: null };
     renderHeader();
     try {
-      const prof = state.profile ? `&profile=${encodeURIComponent(state.profile.name)}` : "";
+      const prof = state.profile ? `&profile=${encodeURIComponent(state.profile.name)}&${usageParams()}` : "";
       const res = await api.get(`/api/hfsearch?q=${encodeURIComponent(text)}${prof}`);
       let added = 0;
       for (const r of res.records) {
@@ -805,6 +947,10 @@ function bind() {
     const id = e.target.dataset.id;
     if (e.target.id === "profile") { await useProfile(e.target.value); return; }
     if (e.target.id === "harness") { q().harness = e.target.value || null; q().harnessStrict = true; update(); return; }
+    if (e.target.id === "ctx" || e.target.id === "agents") {
+      q()[e.target.id] = Number(e.target.value); await reloadUsage(); return;
+    }
+    if (e.target.dataset.id === "kvq") { q().kvq = e.target.checked; await reloadUsage(); return; }
     if (e.target.id === "price") return;
     if (!id) return;
     const on = e.target.checked;
@@ -828,6 +974,8 @@ function bind() {
   $("#sidebar").addEventListener("click", (e) => {
     const b = e.target.closest("[data-where]");
     if (b) { q().where = b.dataset.where; update(); }
+    const u = e.target.closest("[data-use]");
+    if (u) { q().use = u.dataset.use; reloadUsage(); }
     if (e.target.closest("[data-open='pc']")) openPc();
   });
   $("#chips").addEventListener("click", (e) => {
@@ -861,6 +1009,7 @@ function bind() {
     const dk = t.closest("[data-delete-key]"); if (dk) { e.preventDefault(); deleteKey(dk.dataset.deleteKey); return; }
     if (t.closest("#modal [data-open='pc']")) { openPc(); return; }
     if (t.closest("#freshness")) { refreshCatalog(); return; }
+    if (t.closest("[data-open-method]")) { e.preventDefault(); openMethod(); return; }
     if (t.closest("#try-send")) { sendTry(); return; }
     if (t.closest("#pc-save")) { savePc(t.closest("#pc-save").dataset.original); return; }
     if (t.closest("#pc-detect")) { detectPc(); return; }

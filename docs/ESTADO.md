@@ -67,6 +67,15 @@ equipo, siempre marcada como «estimación» con su fórmula.
   Casilla nueva «Reordenar resultados (RAG)». Precio de vídeo solo cuando OpenRouter lo da explícito en
   céntimos por segundo; si no, «sin datos» y los SKU tal cual en el detalle. Sin benchmark ni uso, el orden
   «mejor calidad» va del más nuevo al más antiguo y la tarjeta dice «Destacado».
+- **Método para elegir modelo local (lo más importante para el usuario, 30/10/2026).** Bloque «Cómo lo vas a
+  usar» en Mis equipos: chat/agente, contexto (8K-262K), agentes a la vez (1-8), caché KV q8_0. La caché KV
+  cuenta solo las capas que crecen con el contexto (`layer_types`, `full_attention_interval`, ventana
+  deslizante) × agentes; q8_0 la divide entre 2. Agente → solo Q5_K_M o mejor, o IQ4_XS (regla del método,
+  mostrada como «regla general, no universal»); si no cabe ninguna, se dice cuál cabe por debajo. Orden por
+  índice de agentes en uso agente. Benchmarks de ficha por categoría marcados «del autor» (ninguno viene
+  verificado). Sin censura: citas literales de la ficha (negativas, KL, pruebas de tool calling,
+  aggressive/balanced). Velocidad: no se estima; MTP + `llama-bench`. Constantes IQ4_XS (0,559) e IQ4_NL
+  (0,585) medidas en unsloth/Qwen3-8B-GGUF. Flags de llama.cpp/Ollama comprobados en su documentación.
 - **Buscar por nombre busca también en todo Hugging Face** (`/api/hfsearch`, 40 resultados): lo encontrado
   se ve aunque sea antiguo o de la comunidad, con sus etiquetas y «de Hugging Face».
 - **Arneses (programas que usan la API de OpenRouter):** solo agentes de código (decisión del usuario):
