@@ -91,3 +91,7 @@ abierta (se cambia en Ajustes). Arriba ves «Datos hace…»; púlsalo para actu
   Hugging Face en Ajustes.
 - **No se abre**: mira `~/.local/share/selector-modelos-ia/servidor.log`. Para pararla a mano: clic derecho
   en el icono → «Parar ahora».
+
+## Licencia
+
+[MIT](LICENSE): puedes usar, copiar, modificar y compartir el código libremente, manteniendo el aviso de copyright.
