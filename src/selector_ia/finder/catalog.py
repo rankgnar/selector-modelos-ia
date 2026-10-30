@@ -27,8 +27,8 @@ log = logging.getLogger(__name__)
 
 # Hugging Face pipeline tag -> capabilities (checked against GET /api/tasks, 2026-10-30)
 HF_CAPABILITIES: dict[str, tuple[str, ...]] = {
-    "text-generation": ("chat", "code"),
-    "image-text-to-text": ("chat", "code", "vision"),
+    "text-generation": ("chat",),          # "code" only with evidence (see _code_evidence)
+    "image-text-to-text": ("chat", "vision"),
     "automatic-speech-recognition": ("audio_in",),
     "audio-text-to-text": ("audio_in",),
     "text-to-speech": ("voice",),
@@ -46,7 +46,7 @@ HF_CAPABILITIES: dict[str, tuple[str, ...]] = {
 EXCLUDED_TAGS = {"pyannote-audio",     # speaker diarization: tagged as speech recognition, does not transcribe
                  "coreml", "mlx"}      # Apple-only formats: this app is for Linux
 
-SNAPSHOT_VERSION = 4       # bump when ModelRecord changes: a saved snapshot of another version is rebuilt
+SNAPSHOT_VERSION = 5       # bump when ModelRecord changes: a saved snapshot of another version is rebuilt
 HF_TOP_LIMIT = 50          # per pipeline tag, most downloaded
 HF_TRENDING_LIMIT = 30
 HF_PROVIDER_LIMIT = 30     # most downloaded among those served by a third-party provider
@@ -59,6 +59,10 @@ UNCENSORED_TAGS = ("text-generation", "image-text-to-text", "text-to-image", "im
                    "image-text-to-image", "text-to-video", "image-to-video", "text-to-speech")
 UNCENSORED_WORDS = ("uncensored", "abliterated", "unfiltered", "heretic", "obliterated")
 ADULT_TAGS = {"not-for-all-audiences", "nsfw"}
+# Every chat model can write code; «Programar» only lists those with some evidence of being good at it.
+_CODE_NAME = re.compile(r"(?i)cod(e|er|ing|estral)|devstral|starcoder|\bswe\b")
+_CODE_TEXT = re.compile(r"(?i)\b(cod(e|es|ing|ebases?)|programming|software|developers?|debugg?ing|bugs?)\b")
+_NAME_SIZE = re.compile(r"(?i)(?<![\d.])(\d+(?:\.\d+)?)\s*b(?![a-z])")
 CONFIG_FETCH_LIMIT = 450   # config.json downloads per build (cached for good afterwards: they do not change)
 LLM_CAPS = {"chat", "code", "vision"}
 ARCH_KEYS = ("num_hidden_layers", "n_layer", "num_layers", "num_attention_heads", "n_head", "num_key_value_heads",
@@ -158,6 +162,8 @@ class ModelRecord(BaseModel):
     base_model: str | None = None       # for community versions: the model it derives from
     uncensored: bool = False            # its author / provider declares it uncensored (name, tags, description)
     adult: bool = False                 # tagged not-for-all-audiences / nsfw by its author
+    code_evidence: str | None = None    # why it counts for «Programar»
+    params_note: str | None = None      # when the published parameter count contradicts the model's name
     evals: list[EvalResult] = Field(default_factory=list)   # model card results, by category
     arch: dict | None = None            # attention layout from config.json (KV cache per context)
     max_context: int | None = None      # tokens the model accepts (config.json or OpenRouter)
@@ -279,7 +285,7 @@ def _openrouter_capabilities(m: OpenRouterModel) -> set[str]:
     inputs, outputs = set(m.input_modalities), set(m.output_modalities)
     caps = set()
     if "text" in inputs and "text" in outputs:
-        caps |= {"chat", "code"}
+        caps.add("chat")
     if "file" in inputs and "text" in outputs:
         caps.add("pdf")
     if "image" in inputs and "text" in outputs:
@@ -344,6 +350,32 @@ def _is_number(value: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _code_evidence(name: str, tags: list[str], description: str, evals: list["EvalResult"],
+                   coding_index: float | None) -> str | None:
+    if coding_index is not None:
+        return "índice de programación de Artificial Analysis"
+    if any(e.category == "agentic_coding" for e in evals):
+        return "benchmarks de programación en su ficha"
+    if _CODE_NAME.search(name) or {"code", "coding"} & set(tags):
+        return "su nombre o sus etiquetas"
+    if _CODE_TEXT.search(description):
+        return "la descripción de su proveedor"
+    return None
+
+
+def _checked_params(model_id: str, params: int | None) -> tuple[int | None, str | None]:
+    """Some repos (packed / ternary GGUF) publish a parameter count that contradicts the size in their own
+    name (e.g. «…-9B» with 1.5 billion): then the name wins and the discrepancy is shown."""
+    match = _NAME_SIZE.search(model_id.split("/")[-1])
+    if not params or not match:
+        return params, None
+    named = float(match.group(1)) * 1e9
+    if 0.5 <= params / named <= 2:
+        return params, None
+    published = f"{params / 1e9:.1f}".replace(".", ",")
+    return int(named), f"Tamaño según su nombre: sus metadatos publican {published} mil millones de parámetros"
 
 
 def eval_category(dataset: str, task: str) -> str:
@@ -448,16 +480,24 @@ def _record(offers: list[OpenRouterModel], hf: HFModel | None, hf_id: str | None
         name = model_id.split("/", 1)[-1]
     tags = [x.lower() for x in hf.tags] if hf else []
     uncensored = declares_uncensored(model_id, name, *tags, *(o.description or "" for o in offers[:1]))
+    evals = _evals(hf)
+    code = None
+    if "chat" in caps:
+        code = _code_evidence(f"{model_id} {name}", tags, main.description or "" if main else "", evals,
+                              benchmarks.coding)
+        if code:
+            caps.add("code")
+    params, params_note = _checked_params(model_id, hf.params_total if hf else None)
     return ModelRecord(
         id=model_id, name=name, author=model_id.split("/", 1)[0], capabilities=sorted(caps), hf_id=hf_id,
         hf_pipeline=hf.pipeline_tag if hf else None, openrouter=_offer(offers) if offers else None,
         providers=sorted({p.provider for p in (hf.inference_providers if hf else []) if p.status == "live"}),
         license=hf.license if hf else None, license_class=license_class(hf.license) if hf else "unknown",
-        languages=hf.languages if hf else [], params=hf.params_total if hf else None,
+        languages=hf.languages if hf else [], params=params, params_note=params_note,
         downloads=hf.downloads if hf else None, likes=hf.likes if hf else None,
         trending=hf.trending_score if hf else None, gated=bool(hf.gated) if hf else False,
         community=community, base_model=base_model, uncensored=uncensored, adult=bool(ADULT_TAGS & set(tags)),
-        evals=_evals(hf), max_context=main.context_length if main else None,
+        evals=evals, code_evidence=code, max_context=main.context_length if main else None,
         mtp="mtp" in model_id.lower() or "mtp" in tags,
         created=_iso(created), updated=_iso(updated), old=_is_old(created, updated, now), benchmarks=benchmarks)
 

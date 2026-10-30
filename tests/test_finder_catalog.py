@@ -75,8 +75,8 @@ def test_openrouter_capabilities_come_from_modalities_and_parameters():
         offer("a/painter", inputs=("text",), outputs=("image",), params=()),
         offer("a/editor", inputs=("text", "image"), outputs=("image", "text"), params=()),
     ])
-    assert set(recs["a/reader"].capabilities) == {"chat", "code", "pdf", "vision", "tools", "reasoning"}
-    assert set(recs["a/listener"].capabilities) == {"chat", "code", "audio_in"}
+    assert set(recs["a/reader"].capabilities) == {"chat", "pdf", "vision", "tools", "reasoning"}
+    assert set(recs["a/listener"].capabilities) == {"chat", "audio_in"}
     assert set(recs["a/painter"].capabilities) == {"image_gen"}
     assert {"image_gen", "image_edit", "vision"} <= set(recs["a/editor"].capabilities)
 
@@ -243,3 +243,26 @@ def test_architecture_mtp_and_max_context_from_config():
     build_snapshot(catalog, now=NOW)
     assert catalog.config_calls.count("Qwen/Q") == 1                 # configs are cached for good
     assert catalog.config_calls.count("fan/Q-abliterated-GGUF") == 1  # including "not published"
+
+
+def test_programming_needs_evidence():
+    recs = records([
+        offer("v/indexed", aa={"coding_index": 40.0}),
+        offer("v/described", description="Strong at large codebases and fixing bugs."),
+        offer("v/devstral-small"),
+        offer("v/poet", description="Writes beautiful poems."),
+    ])
+    assert recs["v/indexed"].code_evidence == "índice de programación de Artificial Analysis"
+    assert recs["v/described"].code_evidence == "la descripción de su proveedor"
+    assert "code" in recs["v/devstral-small"].capabilities
+    assert "code" not in recs["v/poet"].capabilities and "chat" in recs["v/poet"].capabilities
+
+
+def test_parameter_count_that_contradicts_the_name_is_corrected():
+    recs = records([offer("prism-ml/ternary-bonsai-2-9b", hf_id="prism-ml/Ternary-Bonsai-2-9B-gguf")],
+                   [hf("prism-ml/Ternary-Bonsai-2-9B-gguf", params_total=1_470_621_184),
+                    hf("Qwen/Qwen3-30B-A3B", params_total=30_500_000_000), hf("x/model", params_total=7)])
+    bonsai = recs["prism-ml/Ternary-Bonsai-2-9B-gguf"]
+    assert bonsai.params == 9_000_000_000 and "1,5 mil millones" in bonsai.params_note
+    assert recs["Qwen/Qwen3-30B-A3B"].params == 30_500_000_000 and recs["Qwen/Qwen3-30B-A3B"].params_note is None
+    assert recs["x/model"].params == 7                                   # no size in the name: as published

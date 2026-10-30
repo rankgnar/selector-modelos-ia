@@ -4,7 +4,7 @@
 
 export const CAPABILITIES = [
   { key: "chat", label: "Escribir y chatear", help: "Conversar, redactar, resumir o responder preguntas." },
-  { key: "code", label: "Programar", help: "Escribir y corregir código. Se ordena por el índice de programación de Artificial Analysis." },
+  { key: "code", label: "Programar", help: "Modelos con alguna prueba de que sirven para programar: índice de programación de Artificial Analysis, benchmarks de programación en su ficha, su nombre (coder, devstral…) o la descripción de su proveedor. Se ordenan por el índice de programación." },
   { key: "tools", label: "Usar herramientas", help: "Llamar a funciones y APIs: agentes y automatizaciones (dato de OpenRouter)." },
   { key: "reasoning", label: "Razonar paso a paso", help: "Piensa antes de responder (dato de OpenRouter)." },
   { key: "pdf", label: "Leer PDF y archivos", help: "Acepta archivos directamente (dato de OpenRouter)." },
@@ -21,7 +21,7 @@ export const CAPABILITIES = [
 ];
 
 export const REQUIREMENTS = [
-  { key: "spanish", label: "Habla español", help: "Quita los que publican sus idiomas sin el español. Los que no publican idiomas se quedan, con aviso." },
+  { key: "spanish", label: "Declara español", help: "Solo los modelos que publican que hablan español. Ojo: la mayoría de modelos de API (Claude, GPT, Gemini…) no publican sus idiomas aunque lo hablen, así que no salen con esta casilla." },
   { key: "uncensored", label: "Sin censura", help: "Modelos que su autor o proveedor declara sin censura («uncensored», «abliterated»…). Casi siempre son versiones de la comunidad: calidad variable y licencia del modelo original." },
   { key: "free", label: "Gratis", help: "Versión gratis en OpenRouter (con límites de uso) o descargable para usarlo sin pagar." },
   { key: "commercial", label: "Uso comercial", help: "Su licencia permite usarlo en un negocio (a veces con condiciones)." },
@@ -149,7 +149,7 @@ export function isFree(rec) {
 
 function requirementOk(rec, key, where) {
   switch (key) {
-    case "spanish": return !(rec.languages || []).length || rec.languages.includes("es");
+    case "spanish": return (rec.languages || []).includes("es");
     case "free": return where === "openrouter" ? isFree(rec) : isFree(rec) || Boolean(rec.hf_id);
     case "commercial": return !rec.hf_id || ["permissive", "conditions"].includes(rec.license_class);
     case "open": return Boolean(rec.hf_id);
@@ -453,7 +453,7 @@ export function prosCons(s, query, results) {
     else if (rec.license_class === "unknown") cons.push("Licencia sin datos: revísala antes de usarlo");
   }
   if (rec.gated) cons.push("Hay que aceptar sus condiciones en Hugging Face antes de descargarlo");
-  if (query.reqs.includes("spanish") && !(rec.languages || []).length) cons.push("No declara qué idiomas habla");
+  if (rec.params_note) cons.push(rec.params_note);
   if (rec.params && rec.params >= 70e9) cons.push(`Muy grande (${fmtParams(rec.params)} de parámetros): en local necesita un equipo muy potente`);
   if (rec.old) cons.push(`Antiguo: publicado el ${fmtDate(rec.created)}`);
   if (rec.openrouter && rec.openrouter.expires) cons.push(`OpenRouter lo retira el ${fmtDate(rec.openrouter.expires)}`);

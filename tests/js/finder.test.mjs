@@ -70,10 +70,10 @@ test("where: openrouter, provider, any and local with fit", () => {
   assert.ok(ids(search(RECORDS, q({ where: "local", onlyFits: false }), fit)).includes("o/open"));
 });
 
-test("requirements: spanish keeps undeclared, free, commercial, open, long", () => {
+test("requirements: spanish only when declared, free, commercial, open, long", () => {
   const any = q({ where: "any" });
   const es = ids(search(RECORDS, { ...any, reqs: ["spanish"] }));
-  assert.ok(es.includes("o/tiny") && es.includes("v/smart") && !es.includes("o/open"));
+  assert.deepEqual(es, ["o/tiny"]);                          // declares es; undeclared and en-only are out
   assert.deepEqual(ids(search(RECORDS, q({ reqs: ["free"] }))), ["o/open"]);
   assert.ok(!ids(search(RECORDS, { ...any, reqs: ["commercial"] })).includes("a/asr-good"));   // licence unknown
   assert.ok(ids(search(RECORDS, { ...any, reqs: ["commercial"] })).includes("v/smart"));       // API: provider terms

@@ -508,6 +508,7 @@ function openModel(id) {
       <button class="btn icon" type="button" data-close="1" aria-label="Cerrar">${ICON.x}</button></div>
     <div class="drawer-body">
       <section><p class="section-title">Por qué está aquí</p><div>${esc(reason(s, q, r.count))}</div>
+        ${q.caps.includes("code") && rec.code_evidence ? `<div class="muted small-text" style="margin-top:6px">Cuenta como «Programar» por: ${esc(rec.code_evidence)}.</div>` : ""}
         <div class="model-sub" style="margin-top:8px">${ticks(rec)}${(rec.capabilities || []).filter((c) => !q.caps.includes(c)).map((c) => `<span class="badge">${esc(capLabel(c))}</span>`).join("")}</div></section>
       ${""}<section class="facts">${facts.map(([k, v]) => `<div class="fact"><div class="metric-label">${esc(k)}</div><div class="metric-value">${esc(v)}</div></div>`).join("")}</section>
       ${skus}

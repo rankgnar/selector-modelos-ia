@@ -76,6 +76,12 @@ equipo, siempre marcada como «estimación» con su fórmula.
   verificado). Sin censura: citas literales de la ficha (negativas, KL, pruebas de tool calling,
   aggressive/balanced). Velocidad: no se estima; MTP + `llama-bench`. Constantes IQ4_XS (0,559) e IQ4_NL
   (0,585) medidas en unsloth/Qwen3-8B-GGUF. Flags de llama.cpp/Ollama comprobados en su documentación.
+- **Filtros que filtran de verdad (corrección del 30/10/2026, el usuario vio que no filtraban):** «Programar»
+  ya no es «cualquier modelo de texto»: exige prueba (índice de programación de AA, benchmarks de programación
+  en su ficha, nombre/etiquetas coder/devstral…, o la descripción del proveedor). «Habla español» pasa a
+  «Declara español» y solo deja los que lo publican (la ayuda avisa de que casi ningún modelo de API publica
+  sus idiomas). Si los parámetros publicados contradicen el tamaño del nombre (×2), manda el nombre y se avisa
+  (caso Ternary-Bonsai-2-9B: los metadatos del GGUF ternario decían 1,5 mil M).
 - **Buscar por nombre busca también en todo Hugging Face** (`/api/hfsearch`, 40 resultados): lo encontrado
   se ve aunque sea antiguo o de la comunidad, con sus etiquetas y «de Hugging Face».
 - **Arneses (programas que usan la API de OpenRouter):** solo agentes de código (decisión del usuario):
