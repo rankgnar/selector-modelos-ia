@@ -121,12 +121,28 @@ Capturas sin ventana: `google-chrome --headless=new --screenshot=… "http://sel
   cuentan como «caben».
 - Los equipos guardados por la versión Qt (por ejemplo «Mi PC») siguen funcionando.
 
-## Pendiente
+## ▶ Para la próxima sesión (anotado el 30/10/2026)
 
-- [x] Repositorio público (30/10/2026). Auditoría: ninguna clave en el historial; datos personales menores
-      solo en versiones antiguas de este archivo → se publicó con el historial limpio. **No subir nunca** la
-      rama `historial-completo` ni volver a poner aquí saldos, IPs o datos del PC del usuario.
-- [ ] Pedir al usuario que confirme que la ventana se agrupa con su icono en el dock (en Wayland no se
-      puede comprobar desde la terminal).
-- [ ] Posibles mejoras: más arneses si los alumnos usan otros (Cursor, Hermes, Junie, OpenClaw tienen
-      guía oficial en OpenRouter); benchmark fiable para voz, música y vídeo (hoy se ordenan por uso).
+**Dónde lo dejamos:** todo está hecho, probado (119 tests de Python, 23 de Node), subido a GitHub (público) e
+instalado en el PC del usuario. Último cambio: los filtros ahora filtran de verdad («Programar» con prueba,
+«Declara español» estricto, tamaños corregidos). El usuario aún no lo ha visto en la app: empezar
+preguntándole qué tal tras cerrar y reabrir la app.
+
+**Pendiente de confirmar con el usuario:**
+- [ ] Que los filtros nuevos le convencen («Declara español» deja fuera a Claude/GPT/Gemini porque no publican
+      idiomas: ¿le parece bien o prefiere otra solución?).
+- [ ] Que la ventana se agrupa con su icono en la barra (en Wayland no se puede comprobar desde la terminal).
+
+**Ideas de mejora (no empezar sin preguntar):**
+- [ ] Revisar más búsquedas típicas de clase en busca de filtros que no reduzcan la lista o resultados raros.
+- [ ] «Programar» deja fuera modelos sin ninguna prueba (p. ej. DeepSeek-V3.1): valorar si hace falta.
+- [ ] Velocidad por API: OpenRouter publica `throughput_last_30m` y uptime por proveedor
+      (`/api/v1/models/{id}/endpoints`); útil para el orden «velocidad» con datos reales.
+- [ ] Más arneses con guía oficial en OpenRouter (Cursor, Hermes Agent, Junie, OpenClaw) si los alumnos los usan.
+- [ ] Benchmark fiable para voz, música y vídeo (hoy se ordenan por uso o novedad).
+- [ ] Tests automáticos de la interfaz (`app.js`): hoy solo hay tests de la lógica (`finder.js`) y capturas.
+
+**Recordatorios:**
+- Flujo: tests → commit → push → `./packaging/linux/install.sh` (instala el último commit) → actualizar este archivo.
+- La rama local `historial-completo` guarda el historial anterior a la publicación: **no subirla nunca**.
+- Probar con datos reales sin tocar los del usuario: `SELECTOR_IA_DATA_DIR=<carpeta temporal> .venv/bin/selector-ia-server --port 8799`.
