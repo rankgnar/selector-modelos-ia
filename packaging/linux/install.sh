@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs «Selector de Modelos IA» for the current user (no sudo). Following ~/proyectos/iconos/README.md:
+# Installs «Selector de Modelos IA» for the current user (no sudo). Following ~/proyectos/herramientas/iconos/README.md:
 #   app source (git clone, used for automatic updates) -> ~/.local/opt/selector-modelos-ia/src
 #   its own Python environment                         -> ~/.local/opt/selector-modelos-ia/venv
 #   launcher (Chrome --app window) and stop script     -> ~/.local/opt/selector-modelos-ia/{lanzar,parar}.sh

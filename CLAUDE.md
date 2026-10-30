@@ -5,7 +5,7 @@ Update it at the end of every significant change.
 
 Local web app for **Linux/Ubuntu only** (the user never uses Windows or Mac): a search engine of
 current AI models for the user's students. Python serves a JSON API + static page on 127.0.0.1;
-the launcher opens it in its own Chrome `--app` window (pattern of `~/proyectos/iconos/README.md`).
+the launcher opens it in its own Chrome `--app` window (pattern of `~/proyectos/herramientas/iconos/README.md`).
 No LLM in the loop: filtering/sorting is deterministic code over the catalog.
 
 ## Hard rule: zero invention

@@ -21,10 +21,10 @@ equipo, siempre marcada como «estimación» con su fórmula.
 
 | Qué | Dónde |
 |---|---|
-| Código | `~/proyectos/Private/selector-modelos-ia` |
+| Código | `~/proyectos/apps/selector-modelos-ia` |
 | Repositorio | GitHub `rankgnar/selector-modelos-ia` (rama `main`), **público** desde el 30/10/2026 con el historial reiniciado en un solo commit (decisión del usuario). El historial anterior completo está solo en la rama local `historial-completo` (no se sube) |
 | App instalada | `~/.local/opt/selector-modelos-ia/` = `src/` (clon de git) + `venv/` + `lanzar.sh`, `parar.sh`, `actualizar.sh` |
-| Acceso | «Mostrar aplicaciones» → `~/.local/share/applications/selector-modelos-ia.desktop` (inventario en `~/proyectos/iconos/README.md`) |
+| Acceso | «Mostrar aplicaciones» → `~/.local/share/applications/selector-modelos-ia.desktop` (inventario en `~/proyectos/herramientas/iconos/README.md`) |
 | Datos del usuario | `~/.local/share/selector-modelos-ia/` (`cache.sqlite3` con catálogo, equipos y ajustes; `servidor.log`; perfil de Chrome de la ventana) |
 | Claves | Llavero del sistema (servicio `selector-modelos-ia`), nunca en archivos |
 | Documentación técnica | `CLAUDE.md` · para el usuario: `README.md` |
@@ -101,7 +101,7 @@ equipo, siempre marcada como «estimación» con su fórmula.
 ## Cómo trabajar en una sesión nueva
 
 ```bash
-cd ~/proyectos/Private/selector-modelos-ia
+cd ~/proyectos/apps/selector-modelos-ia
 .venv/bin/pytest && node --test tests/js/*.test.mjs     # todo debe pasar
 .venv/bin/pytest -m live                                # contra las APIs reales (gratis)
 SELECTOR_IA_DATA_DIR=/tmp/x .venv/bin/selector-ia-server --port 8799   # probar sin tocar los datos del usuario

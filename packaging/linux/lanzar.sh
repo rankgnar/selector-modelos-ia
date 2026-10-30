@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Opens «Selector de Modelos IA» in its own Chrome window (--app, own profile, maximized).
-# Based on ~/proyectos/iconos/plantillas/lanzar-app-web.sh. Before starting the server it updates the
+# Based on ~/proyectos/herramientas/iconos/plantillas/lanzar-app-web.sh. Before starting the server it updates the
 # app from GitHub when there is a new version (actualizar.sh), and it stops the server when the window
 # closes, waiting for a catalog update in progress to finish.
 set -u
