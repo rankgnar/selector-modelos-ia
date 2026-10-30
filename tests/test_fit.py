@@ -130,3 +130,51 @@ def test_nothing_fits_explains_hardware_needed():
 
 def test_choose_handles_empty():
     assert choose([], None) is None
+
+
+def test_kv_cache_grows_with_agents_and_halves_with_q8():
+    base = kv_cache(QWEN_CONFIG, 32768).bytes
+    assert kv_cache(QWEN_CONFIG, 32768, agents=4).bytes == 4 * base
+    q8 = kv_cache(QWEN_CONFIG, 32768, bytes_per_element=1)
+    assert q8.bytes * 2 == base and "1 bytes" in q8.formula
+    assert "4 agentes" in kv_cache(QWEN_CONFIG, 32768, agents=4).formula
+
+
+def test_agentic_use_needs_q5_k_m_or_iq4_xs():
+    variants = qwen_variants()
+    labels = {v.label for v in variants}
+    assert {"IQ4_XS", "Q5_K_M", "Q4_K_M"} <= labels                       # imatrix quants are offered too
+    roomy = profile(32, 16)
+    assert assess_model(variants, roomy, params_total=QWEN3_8B_PARAMS, config=QWEN_CONFIG,
+                        agentic=True).recommended.variant.label in {"Q8_0", "Q6_K", "Q5_K_M"}
+    # 6 GB GPU: Q5_K_M (~6.7 GB with 8k context) does not fit but IQ4_XS does
+    tight = profile(32, 6.5)
+    fit = assess_model(variants, tight, params_total=QWEN3_8B_PARAMS, config=QWEN_CONFIG, agentic=True)
+    assert fit.recommended.variant.label == "IQ4_XS"
+    # 4 GB GPU, 4 agents with long context: nothing allowed fits; report the best below the floor
+    small = profile(8, 4)
+    fit = assess_model(variants, small, params_total=QWEN3_8B_PARAMS, config=QWEN_CONFIG, agentic=True,
+                       context_tokens=32768, agents=4)
+    assert fit.recommended is None and fit.nothing_fits
+
+
+def test_memory_breakdown_has_margin():
+    v = Variant(label="Q4_K_M", format="GGUF", repo_id="r", size_bytes=Q4_K_M_SIZE)
+    mem = estimate_memory(v, QWEN3_8B_PARAMS, kv_cache(QWEN_CONFIG, 8192))
+    assert mem.margin_bytes == mem.total_bytes - Q4_K_M_SIZE - 1_207_959_552 > 0
+
+
+def test_hybrid_models_only_cache_full_attention_layers():
+    # Qwen3.8-27B (config.json, 2026-10-30): 16 full-attention layers of 64, the other 48 linear
+    qwen38 = {"num_hidden_layers": 64, "num_key_value_heads": 4, "head_dim": 256, "full_attention_interval": 4,
+              "layer_types": ["linear_attention"] * 48 + ["full_attention"] * 16}
+    kv = kv_cache(qwen38, 262144)
+    assert kv.bytes == 2 * 16 * 262144 * 4 * 256 * 2
+    assert "16 de 64 capas" in kv.formula and "48 lineales" in kv.formula
+    # gpt-oss-20b: 12 full + 12 sliding (window 128)
+    oss = {"num_hidden_layers": 24, "num_key_value_heads": 8, "head_dim": 64, "sliding_window": 128,
+           "layer_types": ["sliding_attention", "full_attention"] * 12}
+    assert kv_cache(oss, 8192).bytes == 2 * (12 * 8192 + 12 * 128) * 8 * 64 * 2
+    # only the interval published
+    assert kv_cache({"num_hidden_layers": 32, "num_key_value_heads": 4, "head_dim": 256,
+                     "full_attention_interval": 4}, 1000).bytes == 2 * 8 * 1000 * 4 * 256 * 2

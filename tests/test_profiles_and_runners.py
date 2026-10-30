@@ -30,7 +30,8 @@ def test_gguf_chat_commands_use_exact_repo_and_quant():
     model = HFModel(id="Qwen/Qwen3-8B", pipeline_tag="text-generation", fetched_at=NOW)
     v = Variant(label="Q4_K_M", format="GGUF", repo_id="Qwen/Qwen3-8B-GGUF")
     tips = {t.tool: t for t in suggest_runners(model, v, WINDOWS_CPU, 8192)}
-    assert tips["Ollama"].command == "ollama run hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M"
+    assert tips["Ollama"].command == ("OLLAMA_CONTEXT_LENGTH=8192 ollama serve\n# en otra terminal:\n"
+                                      "ollama run hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M")
     assert tips["llama.cpp"].command == "llama-server -hf Qwen/Qwen3-8B-GGUF:Q4_K_M -c 8192"  # no -ngl on CPU
     assert "LM Studio" in tips
     gpu_tips = {t.tool: t for t in suggest_runners(model, v, LINUX_NVIDIA, 4096)}
@@ -51,3 +52,17 @@ def test_asr_and_embeddings():
     emb = HFModel(id="BAAI/bge-m3", pipeline_tag="sentence-similarity", library_name="sentence-transformers",
                   fetched_at=NOW)
     assert "BAAI/bge-m3" in suggest_runners(emb, None, WINDOWS_CPU)[0].command
+
+
+def test_commands_follow_context_agents_and_kv_cache():
+    model = HFModel(id="Qwen/Qwen3-8B", pipeline_tag="text-generation", fetched_at=NOW)
+    v = Variant(label="Q5_K_M", format="GGUF", repo_id="Qwen/Qwen3-8B-GGUF", files=["Qwen3-8B-Q5_K_M.gguf"])
+    tips = {t.tool: t for t in suggest_runners(model, v, LINUX_NVIDIA, 32768, agents=4, kv_q8=True)}
+    assert tips["Ollama"].command.startswith("OLLAMA_CONTEXT_LENGTH=32768 OLLAMA_NUM_PARALLEL=4 "
+                                             "OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 ollama serve")
+    assert tips["llama.cpp"].command == ("llama-server -hf Qwen/Qwen3-8B-GGUF:Q5_K_M -c 131072 -np 4 -ngl 99 "
+                                         "-fa on -ctk q8_0 -ctv q8_0")
+    assert tips["vLLM"].command == "vllm serve Qwen/Qwen3-8B --max-model-len 32768 --max-num-seqs 4 --kv-cache-dtype fp8"
+    assert "SGLang" in tips and tips["Medir la velocidad"].command == "llama-bench -m Qwen3-8B-Q5_K_M.gguf"
+    one = {t.tool for t in suggest_runners(model, v, LINUX_NVIDIA, 8192)}
+    assert "vLLM" not in one                                   # one agent: llama.cpp / Ollama are enough

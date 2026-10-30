@@ -46,7 +46,7 @@ HF_CAPABILITIES: dict[str, tuple[str, ...]] = {
 EXCLUDED_TAGS = {"pyannote-audio",     # speaker diarization: tagged as speech recognition, does not transcribe
                  "coreml", "mlx"}      # Apple-only formats: this app is for Linux
 
-SNAPSHOT_VERSION = 3       # bump when ModelRecord changes: a saved snapshot of another version is rebuilt
+SNAPSHOT_VERSION = 4       # bump when ModelRecord changes: a saved snapshot of another version is rebuilt
 HF_TOP_LIMIT = 50          # per pipeline tag, most downloaded
 HF_TRENDING_LIMIT = 30
 HF_PROVIDER_LIMIT = 30     # most downloaded among those served by a third-party provider
@@ -59,6 +59,27 @@ UNCENSORED_TAGS = ("text-generation", "image-text-to-text", "text-to-image", "im
                    "image-text-to-image", "text-to-video", "image-to-video", "text-to-speech")
 UNCENSORED_WORDS = ("uncensored", "abliterated", "unfiltered", "heretic", "obliterated")
 ADULT_TAGS = {"not-for-all-audiences", "nsfw"}
+CONFIG_FETCH_LIMIT = 450   # config.json downloads per build (cached for good afterwards: they do not change)
+LLM_CAPS = {"chat", "code", "vision"}
+ARCH_KEYS = ("num_hidden_layers", "n_layer", "num_layers", "num_attention_heads", "n_head", "num_key_value_heads",
+             "head_dim", "hidden_size", "kv_lora_rank", "qk_rope_head_dim", "sliding_window",
+             "full_attention_interval", "max_position_embeddings", "num_nextn_predict_layers",
+             "mtp_num_hidden_layers")
+
+# Benchmark dataset / task names -> category (our grouping; values are copied as published).
+EVAL_CATEGORIES = (
+    ("agentic_coding", "Programación con agentes", ("swe-bench", "swe_bench", "swebench", "terminal-bench",
+                                                    "terminal_bench", "deep-swe", "livecodebench", "aider")),
+    ("tools", "Uso de herramientas y agentes", ("bfcl", "tau-bench", "tau2", "tau_bench", "claw-eval", "toolbench",
+                                                "agents-last-exam", "ask-my-agent", "mcp", "agent")),
+    ("instructions", "Seguir instrucciones", ("ifeval", "ifbench", "ifstruct", "multichallenge", "arena-hard")),
+    ("computer_use", "Uso del ordenador", ("osworld", "webarena", "browsecomp", "screenspot", "computer")),
+    ("reasoning", "Razonamiento y conocimiento", ("gpqa", "hle", "mmlu", "aime", "math", "lexam", "omnicompass",
+                                                  "supergpqa")),
+    ("documents", "Documentos", ("parsebench", "extractbench", "docbench", "ocr", "chartqa", "docvqa")),
+    ("vision", "Visión", ("mmmu", "mathvista", "videomme", "mmi")),
+    ("speech", "Voz", ("open-asr-leaderboard", "wer", "vaani", "fleurs", "librispeech")),
+)
 
 ASR_DATASET = "hf-audio/open-asr-leaderboard"
 _VARIANT = re.compile(r":[a-z0-9-]+$")
@@ -98,6 +119,14 @@ class OpenRouterOffer(BaseModel):
     preview: bool = False
 
 
+class EvalResult(BaseModel):
+    category: str                       # key of EVAL_CATEGORIES or "other"
+    name: str                           # dataset id (and task when it adds information)
+    value: float
+    date: str | None = None
+    verified: bool = False              # False = published by the model's author (not independently checked)
+
+
 class Benchmarks(BaseModel):
     intelligence: float | None = None   # Artificial Analysis (inside the OpenRouter catalog)
     coding: float | None = None
@@ -129,6 +158,10 @@ class ModelRecord(BaseModel):
     base_model: str | None = None       # for community versions: the model it derives from
     uncensored: bool = False            # its author / provider declares it uncensored (name, tags, description)
     adult: bool = False                 # tagged not-for-all-audiences / nsfw by its author
+    evals: list[EvalResult] = Field(default_factory=list)   # model card results, by category
+    arch: dict | None = None            # attention layout from config.json (KV cache per context)
+    max_context: int | None = None      # tokens the model accepts (config.json or OpenRouter)
+    mtp: bool = False                   # multi-token prediction (speculative decoding) declared
     created: str | None = None          # ISO
     updated: str | None = None
     old: bool = False                   # published and last updated more than OLD_AFTER_DAYS ago
@@ -313,6 +346,71 @@ def _is_number(value: str) -> bool:
     return True
 
 
+def eval_category(dataset: str, task: str) -> str:
+    text = f"{dataset} {task}".lower()
+    for key, _label, words in EVAL_CATEGORIES:
+        if any(w in text for w in words):
+            return key
+    return "other"
+
+
+def _evals(hf: HFModel | None) -> list[EvalResult]:
+    out = []
+    for b in (hf.eval_results if hf else []):
+        dataset = b.dataset or b.source
+        name = dataset if b.name in ("", "?", dataset) else f"{dataset} · {b.name}"
+        out.append(EvalResult(category=eval_category(dataset, b.name), name=name, value=b.value, date=b.date,
+                              verified=bool(b.verified)))
+    return out
+
+
+def slim_config(config: dict | None) -> dict | None:
+    """Only what the KV-cache estimate needs, with `layer_types` summarized as counts."""
+    if not isinstance(config, dict):
+        return None
+    cfg = config.get("text_config") if isinstance(config.get("text_config"), dict) else config
+    out = {k: cfg[k] for k in ARCH_KEYS if isinstance(cfg.get(k), int)}
+    if isinstance(cfg.get("layer_types"), list):
+        types = [str(x) for x in cfg["layer_types"]]
+        out["layer_counts"] = {t: types.count(t) for t in set(types)}
+    return out if any(k in out for k in ("num_hidden_layers", "n_layer", "num_layers")) else None
+
+
+def _config(catalog: Catalog, repo: str) -> tuple[dict | None, bool]:
+    """(config, downloaded now). Cached for good, including "not available" (stored as {})."""
+    cached = catalog.cache.load_blob(f"config:{repo}")
+    if cached is not None:
+        return (cached[0] or None), False
+    config = catalog.model_config(repo)
+    catalog.cache.save_blob(f"config:{repo}", config or {})
+    return config, True
+
+
+def _add_architectures(catalog: Catalog, records: list["ModelRecord"], say) -> None:
+    llms = [r for r in records if r.hf_id and LLM_CAPS & set(r.capabilities)]
+    llms.sort(key=lambda r: (r.community, -(r.downloads or 0)))
+    fetched = 0
+    for i, rec in enumerate(llms, 1):
+        if i % 25 == 0:
+            say(f"Leyendo la arquitectura de los modelos ({i} de {len(llms)})…")
+        arch = None
+        for repo in (rec.hf_id, rec.base_model):
+            if not repo or fetched >= CONFIG_FETCH_LIMIT:
+                continue
+            try:
+                config, downloaded = _config(catalog, repo)
+            except SelectorError:
+                continue
+            fetched += downloaded
+            arch = slim_config(config)
+            if arch:
+                break
+        if arch:
+            rec.arch = arch
+            rec.max_context = arch.get("max_position_embeddings") or rec.max_context
+            rec.mtp = rec.mtp or bool(arch.get("mtp_num_hidden_layers") or arch.get("num_nextn_predict_layers"))
+
+
 def _iso(d: datetime | None) -> str | None:
     return d.isoformat() if d else None
 
@@ -359,6 +457,8 @@ def _record(offers: list[OpenRouterModel], hf: HFModel | None, hf_id: str | None
         downloads=hf.downloads if hf else None, likes=hf.likes if hf else None,
         trending=hf.trending_score if hf else None, gated=bool(hf.gated) if hf else False,
         community=community, base_model=base_model, uncensored=uncensored, adult=bool(ADULT_TAGS & set(tags)),
+        evals=_evals(hf), max_context=main.context_length if main else None,
+        mtp="mtp" in model_id.lower() or "mtp" in tags,
         created=_iso(created), updated=_iso(updated), old=_is_old(created, updated, now), benchmarks=benchmarks)
 
 
@@ -454,6 +554,7 @@ def build_snapshot(catalog: Catalog, progress: Callable[[str], None] | None = No
     for m, base in community:
         records.append(_record([], m, m.id, now, community=True, base_model=base))
 
+    _add_architectures(catalog, records, say)
     return CatalogSnapshot(records=records, openrouter_date=_iso(or_result.fetched_at),
                            hf_date=_iso(max(dates, default=None)), built_at=now.isoformat(), warnings=warnings)
 

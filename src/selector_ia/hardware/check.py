@@ -64,8 +64,8 @@ def collect_variants(catalog: Catalog, model: HFModel, notes: list[str]) -> list
     return variants
 
 
-def check_model(catalog: Catalog, model_id: str, profile: HardwareProfile,
-                context_tokens: int | None = None) -> ModelCheck:
+def check_model(catalog: Catalog, model_id: str, profile: HardwareProfile, context_tokens: int | None = None,
+                agents: int = 1, kv_q8: bool = False, agentic: bool = False) -> ModelCheck:
     model = catalog.hf_model(model_id)
     notes: list[str] = []
     config = catalog.model_config(model.base_models[0] if model.quant_format and model.base_models else model.id)
@@ -73,6 +73,9 @@ def check_model(catalog: Catalog, model_id: str, profile: HardwareProfile,
     context = context_tokens or min(DEFAULT_CONTEXT, max_ctx or DEFAULT_CONTEXT)
     if config is None and model.pipeline_tag in CHAT_TASKS:
         notes.append("Sin config.json accesible: la memoria del contexto (caché KV) no se incluye.")
+    if max_ctx and context > max_ctx:
+        notes.append(f"Este modelo admite como máximo {max_ctx:,} tokens de contexto y pides {context:,}."
+                     .replace(",", "."))
     variants = collect_variants(catalog, model, notes)
     if model.pipeline_tag in GENERATION_TASKS:
         notes.append("Generar imágenes o vídeo necesita memoria extra durante el proceso (resolución, duración): "
@@ -84,9 +87,15 @@ def check_model(catalog: Catalog, model_id: str, profile: HardwareProfile,
     if skipped:
         notes.append(f"No se muestran las versiones {', '.join(skipped)}: no funcionan en este equipo.")
     variants = [v for v in variants if runs_on(v, profile)]
-    fit = assess_model(variants, profile, params_total=model.params_total, config=config, context_tokens=context)
-    chosen = fit.recommended.variant if fit.recommended else None
-    return ModelCheck(model=model, fit=fit, runners=suggest_runners(model, chosen, profile, context),
+    llm = model.pipeline_tag in CHAT_TASKS
+    fit = assess_model(variants, profile, params_total=model.params_total, config=config, context_tokens=context,
+                       kv_bytes_per_element=1 if kv_q8 else 2, agents=agents, agentic=agentic and llm)
+    if fit.below_floor:
+        notes.append(f"Para usar herramientas conviene Q5_K_M o mejor (o IQ4_XS) y no cabe ninguna: la mejor que "
+                     f"cabe es {fit.below_floor.variant.label}, por debajo de lo recomendado.")
+    pick = fit.recommended or fit.below_floor
+    chosen = pick.variant if pick else None
+    return ModelCheck(model=model, fit=fit, runners=suggest_runners(model, chosen, profile, context, agents, kv_q8),
                       context_tokens=context, notes=notes)
 
 

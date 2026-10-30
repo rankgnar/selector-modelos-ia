@@ -17,7 +17,8 @@ def snapshot() -> CatalogSnapshot:
         ModelRecord(id="v/chat", name="Chat", author="v", capabilities=["chat", "code"],
                     openrouter=OpenRouterOffer(id="v/chat", url="https://openrouter.ai/v/chat", free_id="v/chat:free",
                                                reasoning=True, prices={"prompt": 1.0, "completion": 2.0})),
-        ModelRecord(id="o/small", name="Small", author="o", capabilities=["chat"], hf_id="o/small", params=1_000_000_000),
+        ModelRecord(id="o/small", name="Small", author="o", capabilities=["chat"], hf_id="o/small", params=1_000_000_000,
+                    max_context=32768, arch={"num_hidden_layers": 28, "num_key_value_heads": 8, "head_dim": 128}),
         ModelRecord(id="o/huge", name="Huge", author="o", capabilities=["chat"], hf_id="o/huge", params=700_000_000_000),
     ])
 
@@ -201,3 +202,31 @@ def test_snapshot_saved_by_another_version_is_ignored(monkeypatch):
     state = server.State()
     state.load_saved()
     assert state.snapshot is None
+
+
+def test_fit_follows_context_agents_and_kv_cache(app):
+    host, _ = app
+    call(host, "/api/profiles", {"name": "VPS", "machine": "vps", "ram_gb": 32})
+    base = call(host, "/api/fit?profile=VPS")[1]["fit"]["o/small"]
+    big = call(host, "/api/fit?profile=VPS&ctx=32768&agents=4")[1]["fit"]["o/small"]
+    q8 = call(host, "/api/fit?profile=VPS&ctx=32768&agents=4&kvq=1")[1]["fit"]["o/small"]
+    assert base["kv_gb"] < q8["kv_gb"] < big["kv_gb"] and abs(q8["kv_gb"] * 2 - big["kv_gb"]) < 0.2
+    too_long = call(host, "/api/fit?profile=VPS&ctx=131072")[1]["fit"]["o/small"]
+    assert too_long["verdict"] == "no" and "32.768" in too_long["text"]          # beyond its max context
+    assert call(host, "/api/fit?profile=VPS&ctx=12345")[1]["fit"]["o/small"] == base   # unknown value -> default
+
+
+def test_card_quotes_the_model_card(app, monkeypatch):
+    host, _ = app
+
+    class FakeCatalog:
+        def __init__(self):
+            self.cache = server.Cache()
+
+        def readme(self, repo):
+            return "| **Refusals** | 6/100 | 100/100 |\nThis is the Balanced variant."
+
+    monkeypatch.setattr(server, "build_catalog", FakeCatalog)
+    data = call(host, "/api/card?id=fan/M-Uncensored")[1]
+    assert data["refusals"] == ["Refusals 6/100 100/100"] and data["documented"] and data["variant"] == "balanced"
+    assert "error" in call(host, "/api/card?id=nada")[1]

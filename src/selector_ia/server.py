@@ -29,9 +29,12 @@ from selector_ia.data.huggingface import HuggingFaceClient
 from selector_ia.data.openrouter import OpenRouterClient
 from selector_ia.errors import SelectorError
 from selector_ia.finder.catalog import SNAPSHOT_VERSION, CatalogSnapshot, build_snapshot, hf_records
+from selector_ia.finder.card import read_card
 from selector_ia.finder.equipment import TEMPLATES, EquipmentForm, profile_from_form, profile_json
-from selector_ia.finder.fit import estimate_all
+from selector_ia.finder.fit import AGENTS, CONTEXTS, Usage, estimate_all
+from selector_ia.hardware.profile import GIB
 from selector_ia.hardware.check import check_model
+from selector_ia.hardware.fit import AGENTIC_OK
 from selector_ia.hardware.local import detect_local
 
 log = logging.getLogger(__name__)
@@ -137,11 +140,12 @@ class State:
 
     # --- derived data ---
 
-    def fit(self, profile_name: str) -> dict:
+    def fit(self, profile_name: str, use: Usage | None = None) -> dict:
         snapshot = self.snapshot
         if not snapshot:
             return {}
-        key = (profile_name, snapshot.built_at)
+        use = use or Usage()
+        key = (profile_name, snapshot.built_at, use.model_dump_json())
         if key not in self.fit_cache:
             cache = Cache()
             try:
@@ -150,7 +154,7 @@ class State:
                 cache.close()
             if profile is None:
                 raise SelectorError(f"No existe el equipo «{profile_name}».")
-            self.fit_cache[key] = estimate_all(snapshot.records, profile)
+            self.fit_cache[key] = estimate_all(snapshot.records, profile, use)
         return self.fit_cache[key]
 
     def openrouter_ids(self) -> dict[str, bool]:
@@ -165,6 +169,18 @@ class State:
 
 
 STATE = State()
+
+
+def usage_from(params: dict) -> Usage:
+    """?ctx=32768&agents=4&kvq=1&agentic=1 (only the offered values are accepted)."""
+    def pick(name, allowed, default):
+        try:
+            value = int(params.get(name, default))
+        except ValueError:
+            return default
+        return value if value in allowed else default
+    return Usage(context=pick("ctx", CONTEXTS, 8192), agents=pick("agents", AGENTS, 1),
+                 kv_q8=params.get("kvq") == "1", agentic=params.get("agentic") == "1")
 
 
 def app_version() -> dict:
@@ -250,7 +266,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/ocupado": self.get_busy, "/api/status": self.get_status, "/api/catalog": self.get_catalog,
             "/api/profiles": self.get_profiles, "/api/fit": self.get_fit, "/api/check": self.get_check,
             "/api/settings": self.get_settings, "/api/version": self.get_version,
-            "/api/hfsearch": self.get_hf_search,
+            "/api/hfsearch": self.get_hf_search, "/api/card": self.get_card,
         }
         try:
             if url.path in routes:
@@ -327,7 +343,7 @@ class Handler(BaseHTTPRequestHandler):
                     "templates": [t.model_dump() for t in TEMPLATES]})
 
     def get_fit(self, params):
-        self._json({"fit": STATE.fit(params.get("profile", ""))})
+        self._json({"fit": STATE.fit(params.get("profile", ""), usage_from(params))})
 
     def get_check(self, params):
         model_id, profile_name = params.get("id", ""), params.get("profile", "")
@@ -338,22 +354,55 @@ class Handler(BaseHTTPRequestHandler):
             cache.close()
         if profile is None:
             raise SelectorError(f"No existe el equipo «{profile_name}».")
+        use = usage_from(params)
         catalog = build_catalog()
         try:
-            check = check_model(catalog, model_id, profile)
+            check = check_model(catalog, model_id, profile, use.context, use.agents, use.kv_q8, use.agentic)
         finally:
             catalog.cache.close()
-        rec = check.fit.recommended
+        fit = check.fit
+        rec = fit.recommended or fit.below_floor
+
+        def size(n):
+            return round(n / GIB, 1) if n else None
+
+        mem = rec.memory if rec else None
         self._json({
-            "verdict": rec.verdict.value if rec else ("no" if check.fit.nothing_fits else "unknown"),
-            "reason": rec.reason if rec else (check.fit.hardware_needed or "No se puede calcular."),
+            "verdict": ("limited" if fit.below_floor else rec.verdict.value) if rec
+            else ("no" if fit.nothing_fits else "unknown"),
+            "reason": rec.reason if rec else (fit.hardware_needed or "No se puede calcular."),
             "variant": rec.variant.label if rec else None,
+            "below_floor": bool(fit.below_floor),
             "variant_url": rec.variant.url if rec else None,
-            "memory_source": rec.memory.weights_source if rec else None,
-            "formula": rec.memory.formula if rec else None,
+            "memory_source": mem.weights_source if mem else None,
+            "formula": mem.formula if mem else None,
+            "breakdown": {"weights_gb": size(mem.weights_bytes), "kv_gb": size(mem.kv.bytes if mem.kv else None),
+                          "margin_gb": size(mem.margin_bytes), "total_gb": size(mem.total_bytes),
+                          "kv_formula": mem.kv.formula if mem.kv else None} if mem else None,
+            "variants": [{"label": r.variant.label, "format": r.variant.format, "repo": r.variant.repo_id,
+                          "size_gb": size(r.memory.weights_bytes), "need_gb": size(r.memory.total_bytes),
+                          "verdict": r.verdict.value, "estimated": r.variant.estimated,
+                          "agentic_ok": r.variant.label in AGENTIC_OK,
+                          "chosen": bool(rec) and r.variant.label == rec.variant.label and
+                          r.variant.repo_id == rec.variant.repo_id}
+                         for r in sorted(fit.results, key=lambda r: r.memory.weights_bytes or 0)],
+            "context": check.context_tokens,
             "runners": [r.model_dump() for r in check.runners],
             "notes": check.notes,
         })
+
+    def get_card(self, params):
+        """Evaluation facts quoted from a model's card (uncensored / community versions)."""
+        model_id = params.get("id", "")
+        if "/" not in model_id:
+            raise SelectorError("Modelo no válido.")
+        catalog = build_catalog()
+        try:
+            readme = catalog.readme(model_id)
+        finally:
+            catalog.cache.close()
+        facts = read_card(model_id, readme)
+        self._json(facts.model_dump() | {"documented": facts.documented, "found": readme is not None})
 
     def get_hf_search(self, params):
         """Models of all Hugging Face matching a name, beyond the snapshot (e.g. «abliterated», «dolphin»)."""
@@ -369,7 +418,7 @@ class Handler(BaseHTTPRequestHandler):
         known = {r.id.lower() for r in STATE.snapshot.records} if STATE.snapshot else set()
         records = [r for r in hf_records(found.items) if r.id.lower() not in known]
         self._json({"records": [r.model_dump(mode="json", exclude_none=True) for r in records],
-                    "fit": estimate_all(records, profile) if profile else {}})
+                    "fit": estimate_all(records, profile, usage_from(params)) if profile else {}})
 
     def get_settings(self, _params):
         cache = Cache()

@@ -20,12 +20,15 @@ BYTES_PER_WEIGHT = {
     "Q6_K": 0.821,
     "Q5_K_M": 0.714,
     "Q4_K_M": 0.614,
+    "IQ4_NL": 0.585,
+    "IQ4_XS": 0.559,   # imatrix: spends bits by weight importance
     "Q3_K_M": 0.504,
 }
 BYTES_PER_WEIGHT_SOURCE = "medido en unsloth/Qwen3-8B-GGUF (30/10/2026)"
 
 # GGUF levels shown by default (others like IQ1/IQ2/UD-* exist but add noise for non-experts).
-STANDARD_GGUF = ("Q3_K_M", "Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0", "BF16", "F16", "MXFP4")
+STANDARD_GGUF = ("Q3_K_M", "IQ3_M", "IQ3_S", "Q4_K_S", "Q4_K_M", "IQ4_XS", "IQ4_NL", "Q5_K_S", "Q5_K_M", "Q6_K",
+                 "Q8_0", "BF16", "F16", "MXFP4")
 
 # Below ~3.5 bits per weight quality drops a lot; never recommended unless nothing else fits.
 MIN_RECOMMENDED_BYTES_PER_WEIGHT = 0.45

@@ -17,7 +17,9 @@ class RunnerSuggestion(BaseModel):
 
 
 def suggest_runners(model: HFModel, variant: Variant | None, profile: HardwareProfile,
-                    context_tokens: int = 8192) -> list[RunnerSuggestion]:
+                    context_tokens: int = 8192, agents: int = 1, kv_q8: bool = False) -> list[RunnerSuggestion]:
+    """Commands with the student's context, parallel agents and KV cache type (flags checked against the
+    llama.cpp server README and the Ollama FAQ, 2026-10-30)."""
     os_name = (profile.os or "").lower()
     is_windows_or_mac = "windows" in os_name or "macos" in os_name
     has_nvidia = "nvidia" in profile.gpu_vendors
@@ -27,15 +29,46 @@ def suggest_runners(model: HFModel, variant: Variant | None, profile: HardwarePr
 
     if variant and variant.format == "GGUF" and variant.repo_id and task in CHAT_TASKS:
         ref = f"{variant.repo_id}:{variant.label}"
+        env = [f"OLLAMA_CONTEXT_LENGTH={context_tokens}"]
+        if agents > 1:
+            env.append(f"OLLAMA_NUM_PARALLEL={agents}")
+        if kv_q8:
+            env += ["OLLAMA_FLASH_ATTENTION=1", "OLLAMA_KV_CACHE_TYPE=q8_0"]
         tips.append(RunnerSuggestion(
-            tool="Ollama", command=f"ollama run hf.co/{ref}",
-            note="La opción más sencilla: descarga y arranca el modelo con una sola orden.",
+            tool="Ollama", command=f"{' '.join(env)} ollama serve\n# en otra terminal:\nollama run hf.co/{ref}",
+            note="La opción más sencilla. Reserva memoria para contexto × agentes a la vez"
+                 + ("; la caché q8_0 necesita flash attention (ya incluido)." if kv_q8 else "."),
             url="https://ollama.com/download"))
-        gpu_flag = " -ngl 99" if has_gpu else ""
+        flags = f" -c {context_tokens * agents}"
+        if agents > 1:
+            flags += f" -np {agents}"
+        if has_gpu:
+            flags += " -ngl 99"
+        if kv_q8:
+            flags += " -fa on -ctk q8_0 -ctv q8_0"
         tips.append(RunnerSuggestion(
-            tool="llama.cpp", command=f"llama-server -hf {ref} -c {context_tokens}{gpu_flag}",
-            note="Más control y rendimiento; abre un chat web en http://localhost:8080.",
+            tool="llama.cpp", command=f"llama-server -hf {ref}{flags}",
+            note=("Más control y rendimiento; abre un chat web en http://localhost:8080."
+                  + (f" -c es el total que se reparte entre los {agents} agentes (-np)." if agents > 1 else "")),
             url="https://github.com/ggml-org/llama.cpp/releases"))
+        if agents > 1 and has_nvidia and "windows" not in os_name:
+            repo = model.base_models[0] if model.quant_format and model.base_models else model.id
+            tips.append(RunnerSuggestion(
+                tool="vLLM",
+                command=f"vllm serve {repo} --max-model-len {context_tokens} --max-num-seqs {agents}"
+                        + (" --kv-cache-dtype fp8" if kv_q8 else ""),
+                note="Pensado para muchas peticiones a la vez (varios agentes). Usa los pesos originales o una "
+                     "versión AWQ/FP8 que quepa en la GPU, no GGUF.", url="https://docs.vllm.ai"))
+            tips.append(RunnerSuggestion(
+                tool="SGLang",
+                command=f"python -m sglang.launch_server --model-path {repo} --context-length {context_tokens}",
+                note="Alternativa a vLLM para muchos agentes en paralelo.", url="https://docs.sglang.ai"))
+        tips.append(RunnerSuggestion(
+            tool="Medir la velocidad",
+            command=f"llama-bench -m {variant.files[0].rsplit('/', 1)[-1] if variant.files else 'modelo.gguf'}",
+            note="Mide tus tokens por segundo reales con el archivo descargado (depende de tu GPU: no se puede "
+                 "calcular de antemano). Varios agentes en la misma GPU se reparten esa velocidad.",
+            url="https://github.com/ggml-org/llama.cpp/tree/master/tools/llama-bench"))
         if is_windows_or_mac or profile.kind == "local":
             tips.append(RunnerSuggestion(
                 tool="LM Studio", command=f"Buscar «{variant.repo_id}» en la pestaña Descubrir y elegir {variant.label}",

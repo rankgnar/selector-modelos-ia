@@ -102,6 +102,15 @@ class HuggingFaceClient:
             return None
         return data if isinstance(data, dict) else None
 
+    def get_readme(self, repo_id: str) -> str | None:
+        """The model card (README.md) as text. None if missing or gated."""
+        try:
+            response = request(self.client, "GET", f"https://huggingface.co/{repo_id}/resolve/main/README.md",
+                               service=SERVICE, headers=self._headers())
+        except (InvalidKeyError, NotFoundError):
+            return None
+        return response.text
+
     def task_ids(self) -> list[str]:
         """Official task ids (pipeline tags) from GET /api/tasks."""
         data = self._get("/tasks").json()

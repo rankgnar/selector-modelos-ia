@@ -116,6 +116,18 @@ class Catalog:
         self.cache.save_blob(key, config)
         return config
 
+    def readme(self, repo_id: str) -> str | None:
+        key = f"readme:{repo_id}"
+        cached = self.cache.load_blob(key)
+        if cached and self.cache.is_fresh(cached[1]):
+            return cached[0] or None
+        try:
+            text = self.hf.get_readme(repo_id)
+        except (OfflineError, RateLimitError):
+            return cached[0] if cached else None
+        self.cache.save_blob(key, text or "")
+        return text
+
     # --- existence checks (used by the anti-invention guard) ---
 
     def openrouter_ids(self) -> set[str]:

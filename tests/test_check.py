@@ -44,7 +44,7 @@ def test_llm_uses_published_gguf_and_suggests_ollama():
     check = check_model(catalog, base.id, CPU16)
     assert check.fit.recommended.variant.label == "Q4_K_M"
     assert check.fit.recommended.variant.repo_id == "unsloth/Qwen3-8B-GGUF"
-    assert check.runners[0].command == "ollama run hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M"
+    assert check.runners[0].command.endswith("ollama run hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M")
     assert all(not r.variant.estimated for r in check.fit.results)
 
 

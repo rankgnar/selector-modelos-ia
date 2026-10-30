@@ -27,11 +27,29 @@ def hf(model_id, *, tag="text-generation", likes=10, tags=(), base=None, created
                    base_models=[base] if base else [], created_at=created, fetched_at=NOW, **extra)
 
 
+class MemoryBlobs:
+    def __init__(self):
+        self.blobs = {}
+
+    def load_blob(self, key):
+        return (self.blobs[key], NOW) if key in self.blobs else None
+
+    def save_blob(self, key, data):
+        self.blobs[key] = data
+
+
 class FakeCatalog:
-    def __init__(self, or_models=(), hf_models=(), cards=()):
+    def __init__(self, or_models=(), hf_models=(), cards=(), configs=None):
         self.or_models, self.hf_models = list(or_models), list(hf_models)
         self.cards = {c.id: c for c in cards}
+        self.configs = configs or {}
+        self.config_calls = []
         self.queries = []
+        self.cache = MemoryBlobs()
+
+    def model_config(self, repo):
+        self.config_calls.append(repo)
+        return self.configs.get(repo)
 
     def openrouter_models(self, force=False):
         return CatalogResult(self.or_models, NOW, from_cache=True)
@@ -203,3 +221,25 @@ def test_all_openrouter_modalities_map_to_capabilities():
     assert recs["a/embed"].capabilities == ["embeddings"]
     assert recs["a/rerank"].capabilities == ["rerank"] and recs["a/rerank"].openrouter.free_id == "a/rerank:free"
     assert "a/extract" not in recs                                       # 'decisions': fits no checkbox
+
+
+def test_architecture_mtp_and_max_context_from_config():
+    from selector_ia.data.models import Benchmark as B
+    qwen = {"text_config": {"num_hidden_layers": 64, "num_key_value_heads": 4, "head_dim": 256,
+                            "max_position_embeddings": 262144, "mtp_num_hidden_layers": 1,
+                            "layer_types": ["linear_attention"] * 48 + ["full_attention"] * 16}}
+    catalog = FakeCatalog([], [
+        hf("Qwen/Q", eval_results=[B(source="x", name="pass@1", value=60.0, dataset="ScaleAI/SWE-bench_Pro"),
+                                   B(source="x", name="acc", value=80.0, dataset="Idavidrein/gpqa", verified=True)]),
+        hf("fan/Q-abliterated-GGUF", tags=["gguf", "base_model:quantized:Qwen/Q"], base="Qwen/Q"),
+        hf("Maker/image", tag="text-to-image")], configs={"Qwen/Q": qwen})
+    recs = {r.id: r for r in build_snapshot(catalog, now=NOW).records}
+    q = recs["Qwen/Q"]
+    assert q.arch["layer_counts"] == {"linear_attention": 48, "full_attention": 16}
+    assert q.max_context == 262144 and q.mtp
+    assert {(e.category, e.verified) for e in q.evals} == {("agentic_coding", False), ("reasoning", True)}
+    assert recs["fan/Q-abliterated-GGUF"].arch == q.arch            # GGUF repo: its base model's architecture
+    assert recs["Maker/image"].arch is None                          # only text models need the KV cache
+    build_snapshot(catalog, now=NOW)
+    assert catalog.config_calls.count("Qwen/Q") == 1                 # configs are cached for good
+    assert catalog.config_calls.count("fan/Q-abliterated-GGUF") == 1  # including "not published"
