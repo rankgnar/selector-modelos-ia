@@ -27,7 +27,7 @@ equipo, siempre marcada como «estimación» con su fórmula.
 | Acceso | «Mostrar aplicaciones» → `~/.local/share/applications/selector-modelos-ia.desktop` (inventario en `~/proyectos/herramientas/iconos/README.md`) |
 | Datos del usuario | `~/.local/share/selector-modelos-ia/` (`cache.sqlite3` con catálogo, equipos y ajustes; `servidor.log`; perfil de Chrome de la ventana) |
 | Claves | Llavero del sistema (servicio `selector-modelos-ia`), nunca en archivos |
-| Documentación técnica | `CLAUDE.md` · para el usuario: `README.md` |
+| Documentación técnica | `AGENTS.md` · para el usuario: `README.md` |
 
 ## Historia breve
 

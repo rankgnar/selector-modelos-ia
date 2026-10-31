@@ -1,8 +1,9 @@
-# selector-modelos-ia
+# selector-modelos-ia — local search engine of current AI models for the user's students
 
 **Start every session by reading `docs/ESTADO.md`** (status, decisions, pending work; in Spanish).
 Update it at the end of every significant change.
 
+## Qué es
 Local web app for **Linux/Ubuntu only** (the user never uses Windows or Mac): a search engine of
 current AI models for the user's students. Python serves a JSON API + static page on 127.0.0.1;
 the launcher opens it in its own Chrome `--app` window (pattern of `~/proyectos/herramientas/iconos/README.md`).
@@ -85,3 +86,6 @@ version fails to install; a failed commit is remembered in `version-fallida` and
 - OpenRouter 404 "data policy/guardrail" = the user's privacy settings exclude every provider of that model.
 - Port 8790 is also used by the user's «Subtítulos» app: the launcher finds this server by `/api/ocupado`
   (`"app": "selector"`), never by port alone.
+
+## Estado actual
+Kept in **`docs/ESTADO.md`** (Spanish): status, decisions, pending work. Read it at the start, update it at the end of every significant change.
